@@ -18,6 +18,8 @@ markdown_extensions:
       generic: true
   - pymdownx.highlight
   - pymdownx.superfences
+  - pymdownx.snippets:
+      check_paths: true
 
 plugins:
   - search
@@ -32,8 +34,11 @@ plugins:
 nav:
   - Home: index.md
   - Getting started: getting_started.md
+  - User guide:
+      - Project files and units: user_guide/project_files.md
   - API reference: api/index.md
   - Decisions:
       - decisions/index.md
       - 0001 CADET-Process as process layer: decisions/0001-use-cadet-process.md
       - 0002 pixi environment: decisions/0002-pixi.md
+      - 0004 Units policy: decisions/0004-units-policy.md

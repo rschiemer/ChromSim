@@ -27,3 +27,6 @@ site/
 .DS_Store
 .vscode/
 .idea/
+
+# CADET-Process default scratch folder (should not appear; see diagnostics.py)
+tmp/

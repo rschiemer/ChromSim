@@ -5,15 +5,44 @@ return serialisable objects (dataclasses, pydantic models, file paths) so they c
 as a REST API without redesign (SPEC §8.1).
 """
 
+from chromsim.core.column import Column, ColumnModel
+from chromsim.core.components import Component
+from chromsim.core.method import ResolvedStep, Step
+from chromsim.core.project import IsothermConfig, Project, SolverSettings
+from chromsim.core.resin import Resin
+from chromsim.core.system import System
 from chromsim.diagnostics import DoctorReport, SmokeTestResult, run_doctor
-from chromsim.errors import ChromSimError, EnvironmentCheckError
+from chromsim.errors import ChromSimError, EnvironmentCheckError, ProjectFileError, UnitError
+from chromsim.io.project_file import load_project, project_from_yaml, project_to_yaml, save_project
+from chromsim.units import Quantity
 
 __all__ = [
+    # errors
     "ChromSimError",
-    "DoctorReport",
     "EnvironmentCheckError",
+    "ProjectFileError",
+    "UnitError",
+    # environment
+    "DoctorReport",
     "SmokeTestResult",
     "doctor",
+    # domain model
+    "Column",
+    "ColumnModel",
+    "Component",
+    "IsothermConfig",
+    "Project",
+    "Quantity",
+    "ResolvedStep",
+    "Resin",
+    "SolverSettings",
+    "Step",
+    "System",
+    # project files
+    "load_project",
+    "project_from_yaml",
+    "project_to_yaml",
+    "save_project",
 ]
 
 

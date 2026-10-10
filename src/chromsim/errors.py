@@ -12,3 +12,15 @@ class ChromSimError(Exception):
 
 class EnvironmentCheckError(ChromSimError):
     """The installation is broken, e.g. CADET-Core cannot be found or a test simulation fails."""
+
+
+class UnitError(ChromSimError, ValueError):
+    """A quantity has a missing, unknown or wrong unit, or cannot be converted.
+
+    Also a ``ValueError``, so pydantic reports it as a normal validation error when it is raised
+    while checking a model field.
+    """
+
+
+class ProjectFileError(ChromSimError):
+    """A project file cannot be read, has an unsupported schema version, or fails validation."""
