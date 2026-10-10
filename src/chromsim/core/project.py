@@ -16,6 +16,8 @@ from chromsim.core.components import Component
 from chromsim.core.method import ResolvedStep, Step, resolve_method
 from chromsim.core.resin import Resin
 from chromsim.core.system import System
+from chromsim.isotherms.base import validate_parameters
+from chromsim.isotherms.registry import get_isotherm
 
 # Version of the project-file format; bump it and add a migration in chromsim/io/project_file.py
 # whenever the structure of Project changes incompatibly.
@@ -28,10 +30,11 @@ class IsothermConfig(BaseModel):
     Attributes
     ----------
     model : str
-        Isotherm name, e.g. ``"SMA"``. Checked against the isotherm registry by the backend.
+        Isotherm name as registered, e.g. ``"Linear"``, ``"Langmuir"``, ``"SMA"``.
     parameters : dict[str, dict[str, float]]
-        Component name → {parameter name → value}. Every binding component has its own set.
-        Values are in the units documented by the isotherm (Phase 2).
+        Component name → {parameter name → value}. Every binding component has its own set;
+        components without a set do not bind. Units are documented by each isotherm
+        (docs/theory/isotherms/).
     """
 
     model_config = MODEL_CONFIG
@@ -167,6 +170,13 @@ class Project(BaseModel):
                     f"isotherm parameters: unknown component '{component_name}'. "
                     f"Known components: {known}."
                 )
+
+        isotherm = get_isotherm(self.isotherm.model)
+        validate_parameters(isotherm, names, self.isotherm.parameters)
+        if isotherm.requires_ionic_capacity and self.resin.ionic_capacity is None:
+            raise ValueError(
+                f"{isotherm.name} needs resin.ionic_capacity; add e.g. `ionic_capacity: 1200 mM`."
+            )
 
         for field_name in ("film_diffusion", "pore_diffusion"):
             for component_name in getattr(self.column, field_name) or {}:

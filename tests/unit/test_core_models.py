@@ -3,65 +3,15 @@
 import math
 
 import pytest
+from project_examples import make_project
 from pydantic import ValidationError
 
 from chromsim.core.column import Column, ColumnModel
 from chromsim.core.components import Component
 from chromsim.core.method import Step, resolve_method
-from chromsim.core.project import IsothermConfig, Project, SolverSettings
+from chromsim.core.project import IsothermConfig, SolverSettings
 from chromsim.core.resin import Resin
 from chromsim.core.system import System
-
-
-def make_project(**overrides) -> Project:
-    """The SPEC §4.3 example project, built in code."""
-    data = {
-        "schema_version": 1,
-        "name": "CEX_mAb_LGE",
-        "components": [
-            {"name": "salt"},
-            {"name": "mAb", "mw_kDa": 148, "extinction_coeff_L_per_g_cm": 1.4},
-        ],
-        "column": {"model": "GRM", "length": "20 cm", "diameter": "0.5 cm"},
-        "resin": {
-            "name": "Generic CEX",
-            "particle_radius": "45 um",
-            "ionic_capacity": "1200 mM",
-            "col_porosity": 0.36,
-            "par_porosity": 0.85,
-        },
-        "system": {"tubing_volume": "0.25 mL", "mixer_volume": "0.2 mL"},
-        "isotherm": {
-            "model": "SMA",
-            "parameters": {"mAb": {"k_eq": 1.0e-2, "nu": 6.0, "sigma": 30.0, "k_kin": 1.0e2}},
-        },
-        "method": [
-            {
-                "name": "equilibrate",
-                "duration": "5 CV",
-                "flow": "150 cm/h",
-                "inlet": {"salt": "50 mM"},
-            },
-            {
-                "name": "load",
-                "duration": "2 mL",
-                "flow": "150 cm/h",
-                "inlet": {"salt": "50 mM", "mAb": "1 g/L"},
-            },
-            {"name": "wash", "duration": "5 CV", "flow": "150 cm/h", "inlet": {"salt": "50 mM"}},
-            {
-                "name": "elute",
-                "duration": "20 CV",
-                "flow": "150 cm/h",
-                "inlet": {"salt": "50 mM"},
-                "inlet_end": {"salt": "500 mM"},
-            },
-        ],
-        "solver": {"backend": "cadet", "n_col": 100, "n_par": 25, "abstol": 1.0e-8},
-    }
-    data.update(overrides)
-    return Project.model_validate(data)
-
 
 # --- Component ------------------------------------------------------------------------------------
 

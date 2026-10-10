@@ -33,8 +33,8 @@ settings, are written explicitly so the file documents the whole run.
 | `components` | List of components in order. Each has a `name` and optionally `mw_kDa` (needed for g/L concentrations), `extinction_coeff_L_per_g_cm` (UV) and `charge_hint`. **Salt is component 0 for SMA-type models**; pH, if modelled, comes directly after salt. |
 | `column` | `model` (`LRM`, `LRMP` or `GRM`, default GRM), `length`, `diameter`, optional `axial_dispersion` and per-component `film_diffusion`, `pore_diffusion`. |
 | `resin` | `name`, `particle_radius`, optional `ionic_capacity` (IEX), `col_porosity` ε_c and `par_porosity` ε_p (both between 0 and 1). |
-| `system` | `tubing_volume`, `mixer_volume`, `uv_delay_volume`, `conductivity_delay_volume` (all default 0 mL). |
-| `isotherm` | `model` and `parameters`: one parameter set per binding component. |
+| `system` | `tubing_volume`, `mixer_volume`, `uv_delay_volume`, `conductivity_delay_volume` (all default 0 mL); `tubing_diameter` (default 0.5 mm) and `tubing_axial_dispersion` (default 1e-6 m^2/s, placeholder until calibrated). |
+| `isotherm` | `model` (`Linear`, `Langmuir`, `SMA`) and `parameters`: one parameter set per binding component; see [Isotherms](../theory/isotherms/index.md). |
 | `method` | Ordered steps, each with `name`, `duration`, `flow`, `inlet` and, for a linear gradient, `inlet_end`. |
 | `solver` | `backend` (`cadet`), `n_col`, `n_par`, `abstol`. |
 

@@ -36,9 +36,21 @@ nav:
   - Getting started: getting_started.md
   - User guide:
       - Project files and units: user_guide/project_files.md
+      - Simulating a project: user_guide/simulation.md
+  - Theory:
+      - Isotherms:
+          - theory/isotherms/index.md
+          - Linear: theory/isotherms/linear.md
+          - Langmuir: theory/isotherms/langmuir.md
+          - Steric mass action: theory/isotherms/sma.md
   - API reference: api/index.md
   - Decisions:
       - decisions/index.md
       - 0001 CADET-Process as process layer: decisions/0001-use-cadet-process.md
       - 0002 pixi environment: decisions/0002-pixi.md
       - 0004 Units policy: decisions/0004-units-policy.md
+      - 0005 CADET backend conventions: decisions/0005-cadet-backend-conventions.md
+
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js

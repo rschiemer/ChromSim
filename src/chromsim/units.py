@@ -331,6 +331,38 @@ def concentration_to_si(quantity: Quantity, molar_mass_kg_per_mol: float | None 
     return to_si(quantity, "mass_concentration") / molar_mass_kg_per_mol
 
 
+def concentration_from_si(value_mol_per_m3, unit: str, molar_mass_kg_per_mol: float | None = None):
+    """Convert a concentration in mol/m³ to ``unit`` (molar, e.g. mM, or mass, e.g. g/L).
+
+    Parameters
+    ----------
+    value_mol_per_m3 : float or numpy.ndarray
+        Concentration, mol/m³.
+    unit : str
+        Target unit.
+    molar_mass_kg_per_mol : float, optional
+        Molar mass, kg/mol. Required for mass-concentration units.
+
+    Returns
+    -------
+    float or numpy.ndarray
+        Concentration in ``unit``.
+    """
+    dimension = check_dimension(
+        Quantity(magnitude=1.0, unit=unit),
+        "molar_concentration",
+        "mass_concentration",
+        what="concentration",
+    )
+    if dimension == "molar_concentration":
+        return value_mol_per_m3 * from_si(1.0, unit)
+    if molar_mass_kg_per_mol is None:
+        raise UnitError(
+            f"Converting to {unit} needs the component's molecular weight; set `mw_kDa` or use mM."
+        )
+    return value_mol_per_m3 * molar_mass_kg_per_mol * from_si(1.0, unit)
+
+
 def column_cross_section(diameter_m: float) -> float:
     """Column cross-section :math:`A = \\pi (d/2)^2`, m².
 

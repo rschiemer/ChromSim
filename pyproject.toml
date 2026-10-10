@@ -37,6 +37,8 @@ packages = ["src/chromsim"]
 # --- pytest -----------------------------------------------------------------
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Lets tests import shared helpers such as tests/project_examples.py.
+pythonpath = ["tests"]
 addopts = ["--strict-markers", "-ra"]
 markers = [
     "slow: long-running workflow/backend tests (excluded from `pixi run test`)",
@@ -60,7 +62,8 @@ select = ["E", "F", "W", "I", "B", "UP", "T20", "NPY"]
 # The CLI's job is to write to the terminal; tests and examples may print too.
 "src/chromsim/cli.py" = ["T20"]
 "tests/**" = ["T20"]
-"examples/**" = ["T20", "E402"]
+# Notebooks: printing is the point, and a bare expression at the end of a cell displays it.
+"examples/**" = ["T20", "E402", "B018"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"

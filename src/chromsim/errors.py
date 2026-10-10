@@ -24,3 +24,19 @@ class UnitError(ChromSimError, ValueError):
 
 class ProjectFileError(ChromSimError):
     """A project file cannot be read, has an unsupported schema version, or fails validation."""
+
+
+class IsothermConfigError(ChromSimError, ValueError):
+    """Unknown isotherm, or isotherm parameters that are missing, unknown or out of bounds."""
+
+
+class PluginRegistrationError(ChromSimError):
+    """A plugin (isotherm, optimizer, importer) cannot be registered, e.g. its name is taken."""
+
+
+class SimulationSetupError(ChromSimError):
+    """A project cannot be simulated as it is, e.g. transport parameters are missing."""
+
+
+class SimulationError(ChromSimError):
+    """The simulator ran but failed (solver error, non-zero exit flag)."""

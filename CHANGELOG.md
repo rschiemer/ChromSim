@@ -7,6 +7,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ## [Unreleased]
 
 ### Added
+- Phase 2 CADET backend:
+  - Isotherm descriptors `Linear`, `Langmuir`, `SMA` with a registry (`register_isotherm`,
+    `get_isotherm`, `list_isotherms`), parameter checks (unknown/missing/out of bounds, salt as
+    component 0, ionic capacity for SMA) at project load, and theory pages.
+  - `CadetBackend`: Project → CADET-Process flow sheet (mixer, tubing, LRM/LRMP/GRM column) →
+    CADET-Core; method steps as events with linear gradients; clear errors listing missing
+    transport parameters.
+  - `SimulationResult` with time, volume and CV axes, outlet in any concentration unit, and
+    provenance (project YAML, versions, solver settings, time, user).
+  - `api.simulate`, `api.check_discretisation`, `api.plot_chromatogram`.
+  - `System.tubing_diameter` and `System.tubing_axial_dispersion` (optional, with defaults).
+  - Physics tests: tracer first moments (LRM/LRMP/GRM), system dead-volume delay, gradient delay,
+    linear-isotherm first moment, Langmuir breakthrough plateau and stoichiometric time, mass
+    balances including SMA gradient elution.
+- Tutorial 01 (`examples/01_simulate_lge.py`) simulates the SPEC §4.3 project.
+- Docs: "Simulating a project", isotherm theory pages, ADR 0005 (CADET backend conventions).
 - Phase 1 domain model:
   - `chromsim.units`: the single unit-conversion module (pint). `Quantity` keeps the user's unit
     text for lossless files; conversions to SI for lengths, volumes, durations (time, volume or
