@@ -23,6 +23,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Example project `examples/projects/cex_mab_lge.yaml` (SPEC §4.3) and notebook
   `examples/00_project_files_and_units.py`.
 - Docs: user guide "Project files and units"; ADR 0004 (units policy).
+
+### Fixed
+- `chromsim doctor` no longer creates a `tmp/` folder in the current directory or changes
+  Python's global temp directory (CADET-Process default); CADET now runs in its own temporary
+  folder.
 - Phase 0 scaffold: package layout from SPEC §4.1, pixi environment (`default` and `noui`) with
   lockfile and exported `environment.yml`, pre-commit hooks, GitHub Actions CI (lint, tests on
   Linux/macOS/Windows, no-GUI tier, docs build), MkDocs site skeleton.

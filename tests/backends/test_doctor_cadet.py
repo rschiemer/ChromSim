@@ -7,6 +7,7 @@ rule 4): if a CADET-Process release renames one, these tests fail with a clear m
 
 import shutil
 import subprocess
+import tempfile
 
 from CADETProcess.processModel import (
     ComponentSystem,
@@ -85,3 +86,14 @@ def test_chromsim_doctor_command_end_to_end():
     assert completed.returncode == 0, completed.stdout + completed.stderr
     assert "CADET-Core" in completed.stdout
     assert "CADET test simulation: OK" in completed.stdout
+
+
+def test_doctor_leaves_no_files_and_keeps_global_tempdir(tmp_path, monkeypatch):
+    # Regression: CADET-Process's default temp dir is ./tmp in the working directory, and it
+    # sets tempfile.tempdir globally. doctor must do neither.
+    monkeypatch.chdir(tmp_path)
+    tempdir_before = tempfile.gettempdir()
+    report = api.doctor()
+    assert report.ok, report.problems
+    assert list(tmp_path.iterdir()) == []
+    assert tempfile.gettempdir() == tempdir_before

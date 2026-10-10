@@ -29,3 +29,8 @@ drive CADET-Core. ChromSim does not write CADET-Core configurations directly.
 - Licensing: CADET-Core and CADET-Process are GPL-3.0. ChromSim is internal-only, so no
   distribution obligations arise. Revisit this if ChromSim is ever distributed.
 - Moving to CADET-Core 6 needs its own ADR once 6.0 is final.
+- CADET-Process 0.12 creates `./tmp` in the current working directory for its scratch files and
+  redirects Python's global `tempfile.tempdir` there. ChromSim therefore always creates
+  `Cadet(temp_dir=Path(...))` with its own temporary folder; it must be a `Path`, because a
+  `str` crashes. `tests/backends/test_doctor_cadet.py` guards this for `doctor`, and the
+  Phase 2 backend must do the same.

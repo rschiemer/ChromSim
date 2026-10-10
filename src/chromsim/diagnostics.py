@@ -10,6 +10,10 @@ under a second of wall time.
 All CADET-Process names used here (``Inlet.flow_rate``, ``LumpedRateModelWithoutPores.length``,
 ``Cadet.version`` …) were read from the installed CADET-Process 0.12 and are pinned by
 ``tests/backends/test_doctor_cadet.py`` (CLAUDE.md rule 4).
+
+``Cadet()`` is always given its own temporary folder (as a ``Path``; a ``str`` crashes in
+CADET-Process 0.12). Without it, CADET-Process creates ``./tmp`` in the current working directory
+and redirects Python's global ``tempfile.tempdir`` there.
 """
 
 import contextlib
@@ -18,8 +22,10 @@ import io
 import logging
 import platform
 import sys
+import tempfile
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
 
 import numpy as np
 
@@ -125,11 +131,12 @@ def find_cadet_core_version() -> str:
         ) from error
 
     try:
-        simulator = Cadet()
-        # check_cadet() prints its own success message; keep it out of the doctor report.
-        captured_output = io.StringIO()
-        with contextlib.redirect_stdout(captured_output):
-            cadet_works = simulator.check_cadet()
+        with tempfile.TemporaryDirectory(prefix="chromsim-doctor-") as temp_dir:
+            simulator = Cadet(temp_dir=Path(temp_dir))
+            # check_cadet() prints its own success message; keep it out of the doctor report.
+            captured_output = io.StringIO()
+            with contextlib.redirect_stdout(captured_output):
+                cadet_works = simulator.check_cadet()
         logger.debug("CADET self-check output: %s", captured_output.getvalue().strip())
     except Exception as error:  # CADET-Process raises plain exceptions for a missing binary
         raise EnvironmentCheckError(
@@ -214,7 +221,8 @@ def run_cadet_smoke_test() -> SmokeTestResult:
 
     start = time.perf_counter()
     try:
-        results = Cadet().simulate(process)
+        with tempfile.TemporaryDirectory(prefix="chromsim-doctor-") as temp_dir:
+            results = Cadet(temp_dir=Path(temp_dir)).simulate(process)
     except Exception as error:  # CADET-Process raises plain exceptions on solver failure
         raise EnvironmentCheckError(
             f"The CADET test simulation failed ({error}). Check the CADET-Core installation with "
