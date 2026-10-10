@@ -1,0 +1,29 @@
+# pixi environments (the lockfile pixi.lock IS committed)
+.pixi/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Tool caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Docs build output
+site/
+
+# Notebooks are generated from the jupytext .py files in examples/ (SPEC §3)
+*.ipynb
+.ipynb_checkpoints/
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/

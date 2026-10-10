@@ -1,0 +1,71 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "chromsim"
+dynamic = ["version"]
+description = "Mechanistic chromatography modeling toolbox built on CADET."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Internal use only" }
+authors = [{ name = "R. Schiemer" }]
+dependencies = [
+    "cadet-process>=0.11",
+    "numpy",
+    "scipy>=1.14",
+    "pandas",
+    "pydantic>=2",
+    "pint",
+    "h5py",
+    "plotly",
+    "pyyaml",
+]
+
+[project.optional-dependencies]
+ui = ["nicegui"]
+
+[project.scripts]
+chromsim = "chromsim.cli:main"
+
+[tool.hatch.version]
+path = "src/chromsim/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/chromsim"]
+
+# --- pytest -----------------------------------------------------------------
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["--strict-markers", "-ra"]
+markers = [
+    "slow: long-running workflow/backend tests (excluded from `pixi run test`)",
+    "ui: tests that need NiceGUI installed",
+]
+
+# --- ruff -------------------------------------------------------------------
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-include = ["*.ipynb"]
+# Never reformat Markdown: SPEC.md and CLAUDE.md are hand-written sources of truth.
+extend-exclude = ["*.md"]
+
+[tool.ruff.lint]
+# E/F/W: pycodestyle + pyflakes; I: import order; B: bugbear; UP: modern syntax;
+# T20: no print() in the package (CLAUDE.md rule 7); NPY: numpy idioms.
+select = ["E", "F", "W", "I", "B", "UP", "T20", "NPY"]
+
+[tool.ruff.lint.per-file-ignores]
+# The CLI's job is to write to the terminal; tests and examples may print too.
+"src/chromsim/cli.py" = ["T20"]
+"tests/**" = ["T20"]
+"examples/**" = ["T20", "E402"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+# --- mypy (non-strict, chromsim/ only; SPEC §3) -------------------------------
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true

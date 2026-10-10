@@ -1,0 +1,2 @@
+# Lockfile: never try to merge it by hand; regenerate with `pixi install`.
+pixi.lock merge=binary linguist-language=YAML linguist-generated=true

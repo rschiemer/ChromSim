@@ -1,0 +1,27 @@
+# Install once with `pixi run pre-commit install`.
+# ruff runs from the pixi environment so pre-commit and `pixi run lint` use the same version.
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: end-of-file-fixer
+        # Raw data files are read-only (CLAUDE.md); SPEC/CLAUDE are hand-maintained.
+        exclude: ^(tests/data/|SPEC\.md$|CLAUDE\.md$)
+      - id: trailing-whitespace
+        exclude: ^(tests/data/|SPEC\.md$|CLAUDE\.md$)
+      - id: check-yaml
+      - id: check-toml
+      - id: check-added-large-files
+        args: [--maxkb=1000]
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff check
+        entry: pixi run ruff check --fix
+        language: system
+        types_or: [python, pyi]
+      - id: ruff-format
+        name: ruff format
+        entry: pixi run ruff format
+        language: system
+        types_or: [python, pyi]

@@ -1,0 +1,39 @@
+site_name: ChromSim
+site_description: Mechanistic chromatography modeling toolbox built on CADET.
+repo_url: ""
+docs_dir: docs
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - content.code.copy
+
+markdown_extensions:
+  - admonition
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.highlight
+  - pymdownx.superfences
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            docstring_style: numpy
+            show_source: false
+
+nav:
+  - Home: index.md
+  - Getting started: getting_started.md
+  - API reference: api/index.md
+  - Decisions:
+      - decisions/index.md
+      - 0001 CADET-Process as process layer: decisions/0001-use-cadet-process.md
+      - 0002 pixi environment: decisions/0002-pixi.md

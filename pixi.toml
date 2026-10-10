@@ -1,0 +1,73 @@
+# ChromSim development environment.
+#
+# Set up with `pixi install`; see CLAUDE.md for the common tasks.
+# CADET-Core binaries come from conda-forge (`cadet`); CADET-Process is only published on PyPI.
+# Adding a dependency requires an ADR in docs/decisions/ (CLAUDE.md rule 5).
+
+[workspace]
+name = "chromsim"
+channels = ["conda-forge"]
+# macOS >= 14: hopsy (a CADET-Process dependency) only publishes macOS arm64 wheels for 14+;
+# without this pixi falls back to a source build that needs a C++ toolchain.
+platforms = ["linux-64", { name = "osx-arm64-macos14", platform = "osx-arm64", macos = "14.0" }, "win-64"]
+
+[dependencies]
+python = "3.12.*"
+cadet = ">=5.1,<6"            # CADET-Core 5.x; 6.0 upgrade needs an ADR (SPEC §3)
+numpy = "*"
+scipy = ">=1.14"
+pandas = "*"
+pydantic = ">=2"
+pint = "*"
+h5py = "*"
+plotly = "*"
+pyyaml = "*"
+matplotlib = "*"
+pymoo = ">=0.6"
+
+[pypi-dependencies]
+cadet-process = ">=0.11"
+chromsim = { path = ".", editable = true }
+
+[tasks]
+# Regenerate the conda fallback after changing dependencies.
+export-env = "pixi workspace export conda-environment -e default -n chromsim environment.yml"
+
+[feature.test.dependencies]
+pytest = "*"
+pytest-cov = "*"
+
+[feature.test.tasks]
+test = "pytest -m 'not slow'"
+test-all = "pytest"
+
+[feature.lint.dependencies]
+ruff = "*"
+mypy = "*"
+pre-commit = "*"
+
+[feature.lint.tasks]
+lint = "ruff check . && ruff format --check ."
+typecheck = "mypy src/chromsim"
+
+[feature.docs.dependencies]
+mkdocs-material = "*"
+mkdocstrings-python = "*"
+# pymdown-extensions 12 changed Highlight() and breaks mkdocstrings 1.0.x; lift when fixed upstream.
+pymdown-extensions = "<12"
+
+[feature.docs.tasks]
+docs = "mkdocs serve"
+docs-build = "mkdocs build --strict"
+
+[feature.notebooks.dependencies]
+jupytext = "*"
+
+[feature.ui.dependencies]
+nicegui = "*"
+
+[environments]
+# Everything a developer needs, including the optional UI.
+default = { features = ["test", "lint", "docs", "notebooks", "ui"], solve-group = "main" }
+# The "no-gui" test tier (SPEC §9): same packages, but NiceGUI is absent.
+noui = { features = ["test"], solve-group = "main" }
