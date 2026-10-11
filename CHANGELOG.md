@@ -7,6 +7,25 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ## [Unreleased]
 
 ### Added
+- Phase 3 experimental data:
+  - `Experiment`, `Signal`, `Fraction`: imported runs in SI units, each signal on its own axis,
+    fraction marks, injections, run log and provenance (incl. SHA-256 of the raw file).
+  - Importer registry with `akta_csv` (UNICORN text: UTF-16/UTF-8, tab/comma/semicolon,
+    decimal commas), `akta_xlsx` and `generic_csv` (column mapping); `read_chromatogram` picks
+    the importer automatically. Shared importer contract tests.
+  - `FractionAssay` + YAML mapping profiles (wide/long, CSV/XLSX, LOQ flags, readouts as sums of
+    components); `read_assay`.
+  - Preprocessing: baseline subtraction (constant/linear), UV → concentration (Lambert–Beer),
+    `ConductivityCalibration` and conductivity → salt, resampling, volume → time.
+  - `predict_uv`, `predict_conductivity` (with detector delay volumes); `fraction_averages`,
+    `compare_with_assay` (mismatched fraction ids reported, never guessed); `plot_overlay`,
+    `plot_fraction_comparison`.
+  - Synthetic, realistically formatted fixtures and their generator (`tests/data/`); end-to-end
+    test that the generating parameters reproduce all data within noise.
+- Example project `cex_mab_hmw_lge.yaml` (mAb + HMW), NaCl conductivity calibration, two assay
+  mapping profiles, Tutorial 02 (`examples/02_compare_with_data.py`).
+- Docs: "Experimental data", how-to "Add a chromatogram importer", ADR 0006 (openpyxl).
+- Dependency: openpyxl.
 - Phase 2 CADET backend:
   - Isotherm descriptors `Linear`, `Langmuir`, `SMA` with a registry (`register_isotherm`,
     `get_isotherm`, `list_isotherms`), parameter checks (unknown/missing/out of bounds, salt as

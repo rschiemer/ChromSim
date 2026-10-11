@@ -25,6 +25,7 @@ dependencies:
 - pyyaml *
 - matplotlib *
 - pymoo >=0.6
+- openpyxl *
 - pip
 - pip:
   - cadet-process>=0.11

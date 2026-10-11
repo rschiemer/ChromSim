@@ -20,6 +20,7 @@ dependencies = [
     "h5py",
     "plotly",
     "pyyaml",
+    "openpyxl",
 ]
 
 [project.optional-dependencies]

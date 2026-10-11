@@ -1,0 +1,9 @@
+# Conductivity of NaCl in 20 mM sodium acetate pH 5.5 at 25 °C (synthetic, typical shape:
+# conductivity rises less than linearly with salt). Replace with your own buffer calibration.
+points:
+  - [0 mM, 1.2 mS/cm]
+  - [50 mM, 6.4 mS/cm]
+  - [100 mM, 11.3 mS/cm]
+  - [250 mM, 25.0 mS/cm]
+  - [500 mM, 45.5 mS/cm]
+  - [1000 mM, 82.0 mS/cm]

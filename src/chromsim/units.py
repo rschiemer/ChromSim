@@ -18,6 +18,8 @@ diffusivity                 m²/s                m^2/s, cm^2/s
 film transfer coefficient   m/s                 m/s, cm/s
 rate constant               1/s                 1/s, 1/min
 specific absorptivity       m²/kg               L/(g*cm)
+conductivity                S/m                 mS/cm
+absorbance (detector)       AU                  mAU
 ==========================  ==================  ====================================
 
 Column volumes (``CV``) are not a pint unit, because converting them needs the column
@@ -68,6 +70,8 @@ SI_UNITS = {
     "diffusivity": "m**2/s",
     "rate": "1/s",
     "specific_absorptivity": "m**2/kg",
+    "conductivity": "S/m",
+    "pressure": "Pa",
     "dimensionless": "dimensionless",
 }
 
@@ -83,6 +87,8 @@ EXAMPLE_UNITS = {
     "diffusivity": "m^2/s",
     "rate": "1/s",
     "specific_absorptivity": "L/(g*cm)",
+    "conductivity": "mS/cm",
+    "pressure": "MPa or bar",
     "dimensionless": "dimensionless",
     "column_volumes": "CV",
 }
@@ -480,6 +486,54 @@ def duration_to_si(duration: Quantity, flow_rate_m3_per_s: float, column_volume_
             "duration in time units (e.g. min) instead."
         )
     return volume_m3 / flow_rate_m3_per_s
+
+
+# --- detector signals -----------------------------------------------------------------------------
+
+
+def signal_to_si(values, unit: str):
+    """Convert detector values (UV, conductivity, %B, pH, pressure …) to ChromSim's internal units.
+
+    Parameters
+    ----------
+    values : numpy.ndarray
+        Values as exported, in ``unit``.
+    unit : str
+        Unit text from the export, e.g. ``"mAU"``, ``"mS/cm"``, ``"%"``, ``"pH"``, ``"MPa"``.
+
+    Returns
+    -------
+    tuple of (numpy.ndarray, str)
+        Converted values and their unit: absorbance in ``"AU"``, conductivity in ``"S/m"``,
+        percentages as a fraction (``"1"``), pH as ``"pH"``, other pint-compatible units in SI.
+        Units ChromSim does not know (e.g. offset temperatures) are returned unchanged.
+    """
+    text = unit.strip()
+    if text in ("", "pH"):
+        return values * 1.0, "pH"
+    if text in ("%", "percent"):
+        return values / 100.0, "1"
+    if text.endswith("AU"):  # mAU, AU (absorbance units, not astronomical units)
+        return values * ureg.Quantity(1.0, text).to("absorbance_unit").magnitude, "AU"
+    try:
+        quantity = ureg.Quantity(1.0, text)
+    except (pint.errors.PintError, ValueError, SyntaxError, TypeError):
+        return values * 1.0, text
+    for dimension in ("conductivity", "pressure", "volume", "time", "volumetric_flow"):
+        si_unit = SI_UNITS[dimension]
+        if quantity.dimensionality == ureg.Quantity(1.0, si_unit).dimensionality:
+            return values * quantity.to(si_unit).magnitude, si_unit
+    return values * 1.0, text
+
+
+def signal_from_si(values_si, si_unit: str, unit: str):
+    """Inverse of :func:`signal_to_si` for display, e.g. S/m → mS/cm or AU → mAU."""
+    if si_unit == "pH" or si_unit == unit:
+        return values_si * 1.0
+    if si_unit == "1" and unit in ("%", "percent"):
+        return values_si * 100.0
+    target = "absorbance_unit" if si_unit == "AU" else si_unit
+    return values_si * ureg.Quantity(1.0, target).to(unit).magnitude
 
 
 # --- annotated types for pydantic models ---------------------------------------------------------

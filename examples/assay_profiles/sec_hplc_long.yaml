@@ -1,0 +1,16 @@
+# SEC-HPLC results from the chromatography data system, Excel export in long format: one row per
+# sample and peak. No fraction volumes, so these come from the ÄKTA fraction marks.
+name: SEC-HPLC (long, Excel)
+layout: long
+sheet: SEC results
+skip_rows: 3
+fraction_column: Sample ID
+analyte_column: Peak
+value_column: Concentration
+unit_column: Unit
+sd_column: SD (n=3)
+analyte_names: {Monomer: monomer, HMW: hmw}
+loq: {monomer: 0.005 g/L, hmw: 0.005 g/L}
+readouts:
+  monomer: [mAb]
+  hmw: [HMW]

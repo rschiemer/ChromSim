@@ -39,3 +39,50 @@ def test_time_axis_in_minutes():
 def test_unknown_axis_is_rejected():
     with pytest.raises(ValueError, match="CV, mL, min"):
         plot_chromatogram(fake_result(), x="hours")
+
+
+def test_overlay_draws_measured_solid_and_simulated_dashed_with_fractions():
+    from chromsim.data.experiment import Experiment, Fraction, Signal
+    from chromsim.plotting import plot_overlay
+
+    x = np.linspace(0.0, 10e-6, 11)
+    uv = Signal("UV", "uv", "volume", x, np.linspace(0, 0.1, 11), "AU", "mAU")
+    cond = Signal("Cond", "conductivity", "volume", x, np.full(11, 1.0), "S/m", "mS/cm")
+    experiment = Experiment("e", {"UV": uv, "Cond": cond}, fractions=[Fraction("A1", 2e-6, 4e-6)])
+    simulated = Signal("UV (sim)", "uv", "volume", x, np.linspace(0, 0.1, 11), "AU", "mAU")
+    figure = plot_overlay(experiment, simulated=[simulated])
+    traces = {trace.name: trace for trace in figure.data}
+    assert traces["UV / mAU"].y[-1] == pytest.approx(100.0)  # AU → mAU
+    assert traces["Cond / mS/cm"].y[0] == pytest.approx(10.0)  # S/m → mS/cm
+    assert traces["UV (sim) / mAU"].line.dash == "dash"
+    assert traces["UV / mAU"].x[-1] == pytest.approx(10.0)  # mL
+    assert len(figure.layout.shapes) == 1  # one shaded fraction
+    with pytest.raises(ValueError, match="needs column_volume_m3"):
+        plot_overlay(experiment, x="CV")
+
+
+def test_fraction_comparison_plot():
+    import pandas as pd
+
+    from chromsim.analysis.fractionation import AssayComparison
+    from chromsim.plotting import plot_fraction_comparison
+
+    table = pd.DataFrame(
+        {
+            "fraction": ["A1", "A2"],
+            "analyte": ["monomer", "monomer"],
+            "unit": ["g/L", "g/L"],
+            "measured": [0.5, np.nan],
+            "sd": [0.02, 0.01],
+            "below_loq": [False, True],
+            "simulated": [0.45, 0.01],
+            "start_m3": [1e-6, 2e-6],
+            "end_m3": [2e-6, 3e-6],
+        }
+    )
+    figure = plot_fraction_comparison(AssayComparison(table), "monomer")
+    names = [trace.name for trace in figure.data]
+    assert names == ["monomer measured", "below LOQ", "monomer simulated (fraction average)"]
+    assert list(figure.data[0].x) == pytest.approx([1.5])  # fraction middle in mL
+    with pytest.raises(ValueError, match="No comparison rows"):
+        plot_fraction_comparison(AssayComparison(table), "hcp")

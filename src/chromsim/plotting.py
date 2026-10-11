@@ -93,3 +93,189 @@ def plot_chromatogram(
     figure.update_yaxes(rangemode="tozero", secondary_y=False)
     figure.update_layout(template="simple_white", legend={"orientation": "h", "y": -0.2})
     return figure
+
+
+def _x_values(x_m3, x: str, column_volume_m3: float | None):
+    if x == "mL":
+        return x_m3 * 1e6
+    if x == "CV":
+        if column_volume_m3 is None:
+            raise ValueError("x='CV' needs column_volume_m3 (e.g. project.column.volume_m3).")
+        return x_m3 / column_volume_m3
+    raise ValueError(f"x must be 'mL' or 'CV', got '{x}'.")
+
+
+def plot_overlay(
+    experiment=None,
+    simulated=(),
+    kinds=("uv", "conductivity"),
+    x: str = "mL",
+    column_volume_m3: float | None = None,
+    show_fractions: bool = True,
+) -> go.Figure:
+    """Measured and simulated detector signals on one volume axis.
+
+    UV is drawn on the left axis, all other kinds on the right axis, each in the unit of the
+    original export (e.g. mAU, mS/cm). Measured curves are solid, simulated curves dashed.
+
+    Parameters
+    ----------
+    experiment : Experiment, optional
+        Imported run; its signals of the requested kinds and its fractions are drawn.
+    simulated : sequence of Signal
+        Predicted signals, e.g. from ``predict_uv`` and ``predict_conductivity``.
+    kinds : sequence of str
+        Signal kinds to draw.
+    x : {"mL", "CV"}
+        Horizontal axis.
+    column_volume_m3 : float, optional
+        Needed for ``x="CV"``.
+    show_fractions : bool
+        Mark collected fractions.
+
+    Returns
+    -------
+    plotly.graph_objects.Figure
+    """
+    figure = make_subplots(specs=[[{"secondary_y": True}]])
+    measured = []
+    if experiment is not None:
+        measured = [
+            s for s in experiment.signals.values() if s.kind in kinds and s.x_axis == "volume"
+        ]
+    for signal, dash in [(s, "solid") for s in measured] + [
+        (s, "dash") for s in simulated if s.kind in kinds
+    ]:
+        figure.add_trace(
+            go.Scatter(
+                x=_x_values(signal.x, x, column_volume_m3),
+                y=signal.values_in(signal.original_unit),
+                name=f"{signal.name} / {signal.original_unit}",
+                line={"dash": dash},
+            ),
+            secondary_y=signal.kind != "uv",
+        )
+    if experiment is not None and show_fractions and experiment.fractions:
+        # Shade fractions alternately; label at most ~12 of them so labels stay readable.
+        label_every = max(1, int(np.ceil(len(experiment.fractions) / 12)))
+        for index, fraction in enumerate(experiment.fractions):
+            start = float(_x_values(np.array(fraction.start_m3), x, column_volume_m3))
+            end = float(_x_values(np.array(fraction.end_m3), x, column_volume_m3))
+            figure.add_vrect(
+                x0=start,
+                x1=end,
+                fillcolor="gray",
+                opacity=0.06 if index % 2 else 0.12,
+                line_width=0,
+            )
+            if index % label_every == 0:
+                figure.add_annotation(
+                    x=start,
+                    y=1.0,
+                    yref="paper",
+                    text=fraction.label,
+                    showarrow=False,
+                    xanchor="left",
+                    yanchor="bottom",
+                    font={"size": 9, "color": "gray"},
+                )
+    left_units = sorted({s.original_unit for s in measured + list(simulated) if s.kind == "uv"})
+    right_units = sorted(
+        {s.original_unit for s in measured + list(simulated) if s.kind != "uv" and s.kind in kinds}
+    )
+    figure.update_xaxes(title_text="Volume / mL" if x == "mL" else "Volume / CV")
+    figure.update_yaxes(
+        title_text="UV / " + ", ".join(left_units) if left_units else "UV",
+        secondary_y=False,
+        rangemode="tozero",
+    )
+    figure.update_yaxes(
+        title_text=" , ".join(right_units), secondary_y=True, showgrid=False, tickmode="auto"
+    )
+    figure.update_layout(template="simple_white", legend={"orientation": "h", "y": -0.2})
+    return figure
+
+
+def plot_fraction_comparison(
+    comparison, analyte: str, result: SimulationResult | None = None, components=None
+) -> go.Figure:
+    """Measured vs simulated fraction-averaged values of one readout, as bars over the fractions.
+
+    Parameters
+    ----------
+    comparison : AssayComparison
+        From :func:`chromsim.analysis.fractionation.compare_with_assay`.
+    analyte : str
+        Readout to show.
+    result : SimulationResult, optional
+        Also draw the simulated outlet curve of the readout ...
+    components : list of str, optional
+        ... summed over these components (e.g. ``assay.readouts[analyte]``).
+
+    Returns
+    -------
+    plotly.graph_objects.Figure
+        Measured bars with SD error bars (values below LOQ as open markers at 0), simulated
+        fraction averages as outlined bars, optional continuous simulated curve.
+    """
+    table = comparison.table[comparison.table["analyte"] == analyte]
+    if table.empty:
+        raise ValueError(f"No comparison rows for analyte '{analyte}'.")
+    unit = table["unit"].iloc[0]
+    middle_ml = 0.5 * (table["start_m3"] + table["end_m3"]) * 1e6
+    width_ml = (table["end_m3"] - table["start_m3"]) * 1e6
+    quantified = ~table["below_loq"].astype(bool)
+
+    figure = go.Figure()
+    figure.add_trace(
+        go.Bar(
+            x=middle_ml[quantified],
+            y=table["measured"][quantified],
+            width=width_ml[quantified],
+            error_y={"type": "data", "array": table["sd"][quantified]},
+            name=f"{analyte} measured",
+            marker={"color": "rgba(31, 119, 180, 0.5)"},
+            text=table["fraction"][quantified],
+        )
+    )
+    if (~quantified).any():
+        figure.add_trace(
+            go.Scatter(
+                x=middle_ml[~quantified],
+                y=np.zeros((~quantified).sum()),
+                mode="markers",
+                marker={"symbol": "circle-open", "size": 9},
+                name="below LOQ",
+                text=table["fraction"][~quantified],
+            )
+        )
+    figure.add_trace(
+        go.Bar(
+            x=middle_ml,
+            y=table["simulated"],
+            width=width_ml,
+            name=f"{analyte} simulated (fraction average)",
+            marker={"color": "rgba(0,0,0,0)", "line": {"color": "rgb(214, 39, 40)", "width": 2}},
+        )
+    )
+    if result is not None and components:
+        curve = sum(result.outlet(name, unit) for name in components)
+        figure.add_trace(
+            go.Scatter(
+                x=result.volume_m3 * 1e6,
+                y=curve,
+                name=f"{analyte} simulated",
+                line={"color": "rgb(214, 39, 40)"},
+            )
+        )
+        figure.update_xaxes(
+            range=[float(table["start_m3"].min() * 1e6) - 2, float(table["end_m3"].max() * 1e6) + 2]
+        )
+    figure.update_layout(
+        barmode="overlay",
+        template="simple_white",
+        xaxis_title="Volume / mL",
+        yaxis_title=f"{analyte} / {unit}",
+        legend={"orientation": "h", "y": -0.2},
+    )
+    return figure

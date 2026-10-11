@@ -24,6 +24,7 @@ plotly = "*"
 pyyaml = "*"
 matplotlib = "*"
 pymoo = ">=0.6"
+openpyxl = "*"                # Excel import (ÄKTA XLSX exports, assay sheets); ADR 0006
 
 [pypi-dependencies]
 cadet-process = ">=0.11"

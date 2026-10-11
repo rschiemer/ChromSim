@@ -1,2 +1,7 @@
 # Lockfile: never try to merge it by hand; regenerate with `pixi install`.
 pixi.lock merge=binary linguist-language=YAML linguist-generated=true
+
+# Raw data fixtures are read-only byte-for-byte (UTF-16 exports, CRLF): no line-ending conversion.
+tests/data/akta/** binary
+tests/data/assays/** binary
+tests/data/generic/** binary

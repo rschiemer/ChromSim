@@ -5,6 +5,8 @@ return serialisable objects (dataclasses, pydantic models, file paths) so they c
 as a REST API without redesign (SPEC §8.1).
 """
 
+from chromsim.analysis.detectors import predict_conductivity, predict_uv
+from chromsim.analysis.fractionation import AssayComparison, compare_with_assay, fraction_averages
 from chromsim.backends import SimulationResult, get_backend
 from chromsim.backends.checks import DiscretisationCheck
 from chromsim.backends.checks import check_discretisation as _check_discretisation
@@ -14,6 +16,23 @@ from chromsim.core.method import ResolvedStep, Step
 from chromsim.core.project import IsothermConfig, Project, SolverSettings
 from chromsim.core.resin import Resin
 from chromsim.core.system import System
+from chromsim.data.assays import (
+    AssayMappingProfile,
+    FractionAssay,
+    load_mapping_profile,
+    read_assay,
+)
+from chromsim.data.experiment import Experiment, Fraction, Signal
+from chromsim.data.importers import list_importers, read_chromatogram
+from chromsim.data.preprocessing import (
+    ConductivityCalibration,
+    conductivity_to_salt,
+    load_conductivity_calibration,
+    resample,
+    subtract_baseline,
+    uv_to_concentration,
+    volume_to_time,
+)
 from chromsim.diagnostics import DoctorReport, SmokeTestResult, run_doctor
 from chromsim.errors import (
     ChromSimError,
@@ -26,7 +45,7 @@ from chromsim.errors import (
 )
 from chromsim.io.project_file import load_project, project_from_yaml, project_to_yaml, save_project
 from chromsim.isotherms.registry import list_isotherms
-from chromsim.plotting import plot_chromatogram
+from chromsim.plotting import plot_chromatogram, plot_fraction_comparison, plot_overlay
 from chromsim.units import Quantity
 
 __all__ = [
@@ -67,6 +86,31 @@ __all__ = [
     "check_discretisation",
     "plot_chromatogram",
     "simulate",
+    # experimental data
+    "Experiment",
+    "Fraction",
+    "Signal",
+    "list_importers",
+    "read_chromatogram",
+    "AssayMappingProfile",
+    "FractionAssay",
+    "load_mapping_profile",
+    "read_assay",
+    "ConductivityCalibration",
+    "load_conductivity_calibration",
+    "conductivity_to_salt",
+    "resample",
+    "subtract_baseline",
+    "uv_to_concentration",
+    "volume_to_time",
+    # comparing simulation and experiment
+    "AssayComparison",
+    "compare_with_assay",
+    "fraction_averages",
+    "plot_fraction_comparison",
+    "plot_overlay",
+    "predict_conductivity",
+    "predict_uv",
 ]
 
 

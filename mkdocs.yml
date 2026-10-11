@@ -37,6 +37,9 @@ nav:
   - User guide:
       - Project files and units: user_guide/project_files.md
       - Simulating a project: user_guide/simulation.md
+      - Experimental data: user_guide/experimental_data.md
+  - How-to:
+      - Add a chromatogram importer: how_to/add_importer.md
   - Theory:
       - Isotherms:
           - theory/isotherms/index.md
@@ -50,6 +53,7 @@ nav:
       - 0002 pixi environment: decisions/0002-pixi.md
       - 0004 Units policy: decisions/0004-units-policy.md
       - 0005 CADET backend conventions: decisions/0005-cadet-backend-conventions.md
+      - 0006 openpyxl: decisions/0006-openpyxl.md
 
 extra_javascript:
   - javascripts/mathjax.js

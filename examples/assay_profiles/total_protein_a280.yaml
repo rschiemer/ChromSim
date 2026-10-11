@@ -1,0 +1,16 @@
+# Total protein by A280, exported from the lab's spreadsheet as semicolon-separated text with
+# decimal commas. One row per fraction, with fraction volumes.
+name: Total protein A280 (wide, ; and decimal comma)
+layout: wide
+skip_rows: 2
+delimiter: ";"
+decimal: ","
+fraction_column: Fraction
+start_volume_column: Start volume [ml]
+end_volume_column: End volume [ml]
+volume_unit: mL
+analytes:
+  - {column: "Total protein [mg/ml]", analyte: total_protein, unit: mg/mL, sd_column: "SD [mg/ml]"}
+loq: {total_protein: 0.05 mg/mL}
+readouts:
+  total_protein: [mAb, HMW]
