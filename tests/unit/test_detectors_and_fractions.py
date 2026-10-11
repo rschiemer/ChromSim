@@ -121,3 +121,20 @@ def test_predict_conductivity():
     assert cond.values == pytest.approx(0.5)  # 50 mM → 5 mS/cm = 0.5 S/m
     with pytest.raises(ChromSimError, match="salt_component"):
         predict_conductivity(linear_result(), project, calibration, salt_component="NaCl")
+
+
+def test_assay_target_residuals_keep_their_length_across_the_loq():
+    # A below-LOQ fraction contributes 0 while the simulation stays under the LOQ and a penalty
+    # above it, but always exactly one residual (least squares needs a fixed length).
+    from chromsim.estimation.objectives import AssayTarget
+
+    data = assay()
+    data.results.loc[1, "loq"] = "0.5 g/L"  # F2: below LOQ, simulated 5e-3 × 148 = 0.74 g/L
+    target = AssayTarget(data)
+    above = target.residuals(linear_result(), make_project())
+    data.results.loc[1, "loq"] = "5 g/L"  # now the simulation is below the LOQ
+    below = target.residuals(linear_result(), make_project())
+    assert above.size == below.size == 2  # F1 and F2 (X9 is not collected)
+    assert below[1] == 0.0
+    # (0.74 − 0.5) / SD 0.01, divided by √2 for the number of residuals of this target
+    assert above[1] == pytest.approx((5e-3 * 148 - 0.5) / 0.01 / np.sqrt(2))

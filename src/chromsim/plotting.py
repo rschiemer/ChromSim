@@ -279,3 +279,77 @@ def plot_fraction_comparison(
         legend={"orientation": "h", "y": -0.2},
     )
     return figure
+
+
+def plot_yamamoto(result) -> go.Figure:
+    """Yamamoto plot: log10 GH against log10 I_R with the regression line, and residuals below.
+
+    Parameters
+    ----------
+    result : YamamotoResult
+        From :func:`chromsim.estimation.workflows.yamamoto.yamamoto_fit`.
+    """
+    table = result.table
+    figure = make_subplots(
+        rows=2, cols=1, shared_xaxes=True, row_heights=[0.75, 0.25], vertical_spacing=0.05
+    )
+    figure.add_trace(
+        go.Scatter(
+            x=table["log10_elution_salt"],
+            y=table["log10_gh"],
+            mode="markers",
+            name="runs",
+            text=table["name"],
+            marker={"size": 9},
+        ),
+        row=1,
+        col=1,
+    )
+    line_x = np.linspace(
+        table["log10_elution_salt"].min() - 0.02, table["log10_elution_salt"].max() + 0.02, 50
+    )
+    figure.add_trace(
+        go.Scatter(
+            x=line_x,
+            y=result.slope * line_x + result.intercept,
+            mode="lines",
+            name=f"fit: ν = {result.nu:.2f}, k_eq = {result.k_eq:.3g}, R² = {result.r_squared:.4f}",
+        ),
+        row=1,
+        col=1,
+    )
+    figure.add_trace(
+        go.Scatter(
+            x=table["log10_elution_salt"], y=table["residual"], mode="markers", showlegend=False
+        ),
+        row=2,
+        col=1,
+    )
+    figure.add_hline(y=0.0, line={"width": 1, "color": "gray"}, row=2, col=1)
+    figure.update_yaxes(title_text="log10 GH / mM", row=1, col=1)
+    figure.update_yaxes(title_text="residual", row=2, col=1)
+    figure.update_xaxes(title_text="log10 I_R / mM", row=2, col=1)
+    figure.update_layout(template="simple_white", legend={"orientation": "h", "y": -0.25})
+    return figure
+
+
+def plot_correlation(report) -> go.Figure:
+    """Heat map of the parameter correlation matrix of an :class:`UncertaintyReport`."""
+    correlation = report.correlation
+    figure = go.Figure(
+        go.Heatmap(
+            z=correlation.to_numpy(),
+            x=list(correlation.columns),
+            y=list(correlation.index),
+            zmin=-1,
+            zmax=1,
+            colorscale="RdBu",
+            reversescale=True,
+            text=np.round(correlation.to_numpy(), 2),
+            texttemplate="%{text}",
+        )
+    )
+    figure.update_layout(
+        template="simple_white", title="Parameter correlation", yaxis={"autorange": "reversed"}
+    )
+    return figure

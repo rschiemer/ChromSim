@@ -219,6 +219,9 @@ def check_dimension(quantity: Quantity, *allowed: str, what: str | None = None) 
     UnitError
         If the quantity has none of the allowed dimensions.
     """
+    # Values assigned into dicts of a model (e.g. ``step.inlet["mAb"] = "1 g/L"``) are not
+    # validated by pydantic, so text may arrive here; accept it like any other input.
+    quantity = Quantity.parse(quantity)
     if quantity.unit == COLUMN_VOLUME_UNIT:
         if "column_volumes" in allowed:
             return "column_volumes"
@@ -259,6 +262,7 @@ def to_si(quantity: Quantity, *allowed: str) -> float:
         If the dimension is not allowed, or the quantity is in column volumes (use
         :func:`duration_to_si`, which knows the column volume and flow rate).
     """
+    quantity = Quantity.parse(quantity)
     dimension = check_dimension(quantity, *allowed)
     if dimension == "column_volumes":
         raise UnitError(
@@ -472,6 +476,7 @@ def duration_to_si(duration: Quantity, flow_rate_m3_per_s: float, column_volume_
     UnitError
         If the quantity is not a duration, or it is volume-based and the flow rate is not positive.
     """
+    duration = Quantity.parse(duration)
     dimension = check_dimension(duration, "time", "volume", "column_volumes", what="duration")
     if dimension == "time":
         return to_si(duration, "time")

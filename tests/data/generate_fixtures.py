@@ -12,10 +12,19 @@ baseline drift and noise:
 - assays/sec_hplc.xlsx           long format, sheet "SEC results", no volumes, includes a feed
                                  sample "Load" and a sample "A99" that was never collected
 
+Calibration data for Tutorial 03 (same column and system; separate random generator, so the files
+above are unchanged by adding these):
+
+- akta/tracer_system.csv     acetone pulse with the column bypassed (mixer, tubing, UV delay)
+- akta/tracer_dextran.csv    pore-excluded dextran pulse (ε_c and axial dispersion)
+- akta/tracer_acetone.csv    pore-penetrating acetone pulse (ε_t)
+- akta/lge_{10,20,30,40}cv.csv  low-load mAb runs with 10–40 CV gradients (Yamamoto method)
+
 Raw data are read-only for ChromSim (CLAUDE.md); this script is the only thing that writes them.
 Re-running it with the same seed reproduces the files.
 """
 
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -29,6 +38,9 @@ from chromsim.data.experiment import Fraction
 from chromsim.data.preprocessing import ConductivityCalibration
 
 ROOT = Path(__file__).parents[2]
+sys.path.insert(0, str(ROOT / "tests"))
+from synthetic import rectangular_pulse, through_system  # noqa: E402  (needs the path above)
+
 OUT = Path(__file__).parent
 TRUE_MAB_K_EQ = 1.5e-2
 RNG = np.random.default_rng(20261011)
@@ -117,15 +129,24 @@ def unicorn_columns(curve_list, fraction_marks, injection, log):
     return columns
 
 
-def write_unicorn(columns, csv_path, xlsx_path):
+def _table(columns):
     n_rows = max(len(c[2]) for c in columns)
     header = [c[0] for c in columns]
     units_row = [c[1] for c in columns]
     data = [[c[2][i] if i < len(c[2]) else "" for c in columns] for i in range(n_rows)]
+    return header, units_row, data
 
-    lines = ["cex_mab_hmw_run01 001", "\t".join(header), "\t".join(units_row)]
+
+def write_unicorn_csv(columns, csv_path, title):
+    header, units_row, data = _table(columns)
+    lines = [title, "\t".join(header), "\t".join(units_row)]
     lines += ["\t".join(row) for row in data]
     csv_path.write_text("\r\n".join(lines) + "\r\n", encoding="utf-16")
+
+
+def write_unicorn(columns, csv_path, xlsx_path):
+    header, units_row, data = _table(columns)
+    write_unicorn_csv(columns, csv_path, "cex_mab_hmw_run01 001")
 
     workbook = openpyxl.Workbook()
     sheet = workbook.active
@@ -203,6 +224,147 @@ def write_assays(result, fraction_marks):
     workbook.save(OUT / "assays/sec_hplc.xlsx")
 
 
+# --- calibration runs for Tutorial 03 ------------------------------------------------------
+
+CALIBRATION_RNG = np.random.default_rng(20261012)
+TRACER_INJECTION_START_ML, TRACER_INJECTION_ML = 1.0, 0.1
+TRACER_RUN_ML = 9.0
+UV_PER_MM = 400.0  # detector response of the tracers, mAU per mM
+
+
+def _tutorial_project():
+    return api.load_project(ROOT / "examples/projects/cex_mab_hmw_lge.yaml")
+
+
+def _tracer_project(column_model, par_porosity):
+    """Non-binding tracer pulse on the tutorial column, without system volumes."""
+    base = _tutorial_project()
+    data = {
+        "name": "tracer",
+        "components": [{"name": "tracer"}],
+        "column": {
+            "model": column_model,
+            "length": str(base.column.length),
+            "diameter": str(base.column.diameter),
+            "axial_dispersion": str(base.column.axial_dispersion),
+            "film_diffusion": {"tracer": "1e-4 m/s"},
+            "pore_diffusion": {"tracer": "1e-10 m^2/s"},
+        },
+        "resin": base.resin.model_dump(mode="json") | {"par_porosity": par_porosity},
+        "isotherm": {"model": "Linear", "parameters": {}},
+        "method": [
+            {
+                "name": "equilibrate",
+                "duration": f"{TRACER_INJECTION_START_ML} mL",
+                "flow": "150 cm/h",
+                "inlet": {},
+            },
+            {
+                "name": "inject",
+                "duration": f"{TRACER_INJECTION_ML} mL",
+                "flow": "150 cm/h",
+                "inlet": {"tracer": "1 mM"},
+            },
+            {
+                "name": "elute",
+                "duration": f"{TRACER_RUN_ML - 1.1} mL",
+                "flow": "150 cm/h",
+                "inlet": {},
+            },
+        ],
+        "solver": {"n_col": 400 if column_model == "LRM" else 100, "n_par": 20},
+    }
+    return api.Project.model_validate(data)
+
+
+def _uv_curve(volume_m3, concentration_mM, uv_delay_m3, step_ml=0.005):
+    """UV trace at the detector, which sees the outlet ``uv_delay_m3`` later."""
+    x = np.arange(0.0, volume_m3[-1] / ML, step_ml)
+    values = np.interp(x * ML - uv_delay_m3, volume_m3, concentration_mM, left=0.0) * UV_PER_MM
+    values += 0.8 + CALIBRATION_RNG.normal(0.0, 0.3, x.size)  # offset and noise, mAU
+    return ("UV1_280nm", "ml", "mAU", x, values)
+
+
+def _injection_columns():
+    return [
+        ("Chrom.1_Injection", "ml", [f"{TRACER_INJECTION_START_ML:.3f}"]),
+        ("", "(Injections)", [""]),
+    ]
+
+
+def _numeric_columns(curve_list):
+    columns = []
+    for name, x_unit, unit, x, values in curve_list:
+        columns.append((f"Chrom.1_{name}", x_unit, [f"{v:.3f}" for v in x]))
+        columns.append(("", unit, [f"{v:.4f}" for v in values]))
+    return columns
+
+
+def write_tracer_runs():
+    system = _tutorial_project().system
+    mixer, tubing = system.mixer_volume_m3, system.tubing_volume_m3
+    volume = np.linspace(0.0, TRACER_RUN_ML * ML, 18001)
+    pulse = rectangular_pulse(volume, TRACER_INJECTION_START_ML * ML, TRACER_INJECTION_ML * ML)
+    signals = {"system": (volume, through_system(volume, pulse, mixer, tubing))}
+    for name, model, par_porosity in (("dextran", "LRM", 1e-9), ("acetone", "GRM", None)):
+        project = _tracer_project(model, par_porosity or _tutorial_project().resin.par_porosity)
+        result = api.simulate(project)
+        signals[name] = (
+            result.volume_m3,
+            through_system(result.volume_m3, result.outlet("tracer"), mixer, tubing),
+        )
+    for name, (x, concentration) in signals.items():
+        uv = _uv_curve(x, concentration, system.uv_delay_volume_m3)
+        columns = _numeric_columns([uv]) + _injection_columns()
+        write_unicorn_csv(columns, OUT / f"akta/tracer_{name}.csv", f"tracer_{name} 001")
+
+
+def write_lge_runs():
+    calibration_file = ROOT / "examples/calibrations/nacl_conductivity.yaml"
+    calibration = ConductivityCalibration.model_validate(
+        yaml.safe_load(calibration_file.read_text())
+    )
+    for gradient_cv in (10, 20, 30, 40):
+        project = _tutorial_project()
+        data = project.model_dump(mode="json")
+        data["components"] = data["components"][:2]  # salt and mAb only
+        data["column"]["film_diffusion"].pop("HMW")
+        data["column"]["pore_diffusion"].pop("HMW")
+        data["isotherm"]["parameters"] = {
+            "mAb": data["isotherm"]["parameters"]["mAb"] | {"k_eq": TRUE_MAB_K_EQ}
+        }
+        data["method"][1] = {
+            "name": "load",
+            "duration": "0.5 mL",
+            "flow": "150 cm/h",
+            "inlet": {"salt": "50 mM", "mAb": "1 g/L"},
+        }
+        data["method"][3]["duration"] = f"{gradient_cv} CV"
+        data["solver"] = {"n_col": 100, "n_par": 25}
+        project = api.Project.model_validate(data)
+        result = api.simulate(project)
+        uv = predict_uv(result, project)
+        cond = predict_conductivity(result, project, calibration)
+        x_uv = np.arange(0.0, result.volume_m3[-1] / ML, 0.05)
+        uv_mau = (
+            np.interp(x_uv * ML, uv.x, uv.values * 1000.0, left=0.0)
+            + 0.5
+            + CALIBRATION_RNG.normal(0.0, 0.1, x_uv.size)
+        )
+        x_cond = np.arange(0.0, result.volume_m3[-1] / ML, 0.1)
+        cond_ms = np.interp(x_cond * ML, cond.x, cond.values * 10.0, left=cond.values[0] * 10.0)
+        cond_ms += CALIBRATION_RNG.normal(0.0, 0.03, x_cond.size)
+        load = result.steps[1]
+        injection = load.start_s * load.flow_rate_m3_per_s / ML
+        columns = _numeric_columns(
+            [("UV1_280nm", "ml", "mAU", x_uv, uv_mau), ("Cond", "ml", "mS/cm", x_cond, cond_ms)]
+        )
+        columns += [("Chrom.1_Injection", "ml", [f"{injection:.3f}"]), ("", "(Injections)", [""])]
+        write_unicorn_csv(
+            columns, OUT / f"akta/lge_{gradient_cv}cv.csv", f"lge_{gradient_cv}cv 001"
+        )
+
+
 def main():
     (OUT / "akta").mkdir(exist_ok=True)
     (OUT / "assays").mkdir(exist_ok=True)
@@ -211,6 +373,8 @@ def main():
     columns = unicorn_columns(curves(project, result), fraction_marks, injection, log)
     write_unicorn(columns, OUT / "akta/cex_mab_hmw_run01.csv", OUT / "akta/cex_mab_hmw_run01.xlsx")
     write_assays(result, fraction_marks)
+    write_tracer_runs()
+    write_lge_runs()
     print("fixtures written to", OUT)
 
 

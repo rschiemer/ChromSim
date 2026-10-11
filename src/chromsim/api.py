@@ -7,6 +7,14 @@ as a REST API without redesign (SPEC §8.1).
 
 from chromsim.analysis.detectors import predict_conductivity, predict_uv
 from chromsim.analysis.fractionation import AssayComparison, compare_with_assay, fraction_averages
+from chromsim.analysis.peaks import (
+    PeakMoments,
+    asymmetry_factor,
+    hetp,
+    peak_maximum,
+    peak_moments,
+    plate_number,
+)
 from chromsim.backends import SimulationResult, get_backend
 from chromsim.backends.checks import DiscretisationCheck
 from chromsim.backends.checks import check_discretisation as _check_discretisation
@@ -43,9 +51,27 @@ from chromsim.errors import (
     SimulationSetupError,
     UnitError,
 )
+from chromsim.estimation.objectives import AssayTarget, FitExperiment, SignalTarget
+from chromsim.estimation.parameters import FitParameter, get_value, set_values
+from chromsim.estimation.uncertainty import UncertaintyReport, parameter_uncertainty
+from chromsim.estimation.workflows.inverse_fit import FitResult, inverse_fit
+from chromsim.estimation.workflows.tracer import TracerAnalysis, TracerRun, analyse_tracers
+from chromsim.estimation.workflows.yamamoto import (
+    LgeRun,
+    YamamotoResult,
+    elution_salt_at_peak,
+    gradient_slope,
+    yamamoto_fit,
+)
 from chromsim.io.project_file import load_project, project_from_yaml, project_to_yaml, save_project
 from chromsim.isotherms.registry import list_isotherms
-from chromsim.plotting import plot_chromatogram, plot_fraction_comparison, plot_overlay
+from chromsim.plotting import (
+    plot_chromatogram,
+    plot_correlation,
+    plot_fraction_comparison,
+    plot_overlay,
+    plot_yamamoto,
+)
 from chromsim.units import Quantity
 
 __all__ = [
@@ -111,6 +137,34 @@ __all__ = [
     "plot_overlay",
     "predict_conductivity",
     "predict_uv",
+    # peak analysis
+    "PeakMoments",
+    "asymmetry_factor",
+    "hetp",
+    "peak_maximum",
+    "peak_moments",
+    "plate_number",
+    # calibration
+    "TracerAnalysis",
+    "TracerRun",
+    "analyse_tracers",
+    "LgeRun",
+    "YamamotoResult",
+    "elution_salt_at_peak",
+    "gradient_slope",
+    "yamamoto_fit",
+    "plot_yamamoto",
+    "AssayTarget",
+    "FitExperiment",
+    "FitParameter",
+    "FitResult",
+    "SignalTarget",
+    "get_value",
+    "inverse_fit",
+    "set_values",
+    "UncertaintyReport",
+    "parameter_uncertainty",
+    "plot_correlation",
 ]
 
 

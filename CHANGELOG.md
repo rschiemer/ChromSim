@@ -7,6 +7,26 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ## [Unreleased]
 
 ### Added
+- Phase 4 calibration:
+  - Peak analysis (`analysis/peaks.py`): moments with injection correction, plate number, HETP,
+    asymmetry factor, sub-grid peak maximum.
+  - Tracer workflow: system volume, ε_c, ε_t, ε_p from first moments; D_ax via the closed–closed
+    dispersion model, flagged when system-dominated; `apply_to(project)`.
+  - Yamamoto method derived for ChromSim's model (validated against CADET to < 1 %); helpers for
+    gradient slope and delay-corrected elution salt; `plot_yamamoto`.
+  - Inverse fit: `FitParameter` (project paths, lin/log scaling, shared or per-experiment),
+    `SignalTarget`/`AssayTarget` with a residual registry (normalized, absolute, sd_weighted with
+    LOQ censoring), multi-experiment TRF least squares with multi-start and progress callback.
+  - Uncertainty: linearised covariance, 95 % intervals, correlation matrix, flags for high
+    correlation and bounds; `plot_correlation`.
+  - Synthetic-data recovery tests (tracer, Yamamoto, multi-experiment fit with noise).
+  - Calibration fixtures (tracer pulses, four LGE runs) and Tutorial 03.
+- Docs: "Calibrating a model", Yamamoto derivation, ADR 0007 (calibration conventions).
+
+### Fixed
+- Text assigned into nested dicts of a project (e.g. `step.inlet["mAb"] = "1 g/L"`) no longer
+  crashes unit conversion.
+- `compare_with_assay(..., warn=False)` to avoid repeated mismatch warnings during fits.
 - Phase 3 experimental data:
   - `Experiment`, `Signal`, `Fraction`: imported runs in SI units, each signal on its own axis,
     fraction marks, injections, run log and provenance (incl. SHA-256 of the raw file).

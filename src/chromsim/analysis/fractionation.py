@@ -103,6 +103,7 @@ def compare_with_assay(
     assay: FractionAssay,
     fractions: list[Fraction] | None = None,
     delay_volume_m3: float = 0.0,
+    warn: bool = True,
 ) -> AssayComparison:
     """Compare assay results with fraction-averaged simulated concentrations.
 
@@ -120,6 +121,8 @@ def compare_with_assay(
         Collected fractions, used when the assay has no volumes.
     delay_volume_m3 : float
         Volume between simulated outlet and fraction collector, m³.
+    warn : bool
+        Log fraction-id mismatches (they are always listed in the result).
 
     Returns
     -------
@@ -141,7 +144,7 @@ def compare_with_assay(
     assay_labels = assay.fractions
     not_collected = [label for label in assay_labels if label not in available]
     without_assay = [label for label in available if label not in assay_labels]
-    if not_collected:
+    if not_collected and warn:
         logger.warning(
             "Assay '%s': fraction(s) %s have no matching collected fraction and are left out.",
             assay.name,

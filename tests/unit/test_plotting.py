@@ -86,3 +86,23 @@ def test_fraction_comparison_plot():
     assert list(figure.data[0].x) == pytest.approx([1.5])  # fraction middle in mL
     with pytest.raises(ValueError, match="No comparison rows"):
         plot_fraction_comparison(AssayComparison(table), "hcp")
+
+
+def test_yamamoto_and_correlation_plots():
+    import pandas as pd
+
+    from chromsim.estimation.uncertainty import UncertaintyReport
+    from chromsim.estimation.workflows.yamamoto import LgeRun, yamamoto_fit
+    from chromsim.plotting import plot_correlation, plot_yamamoto
+
+    runs = [LgeRun("a", 1e7, 300.0), LgeRun("b", 2e7, 330.0), LgeRun("c", 4e7, 365.0)]
+    figure = plot_yamamoto(yamamoto_fit(runs, 3.9e-6, 0.9, 1200.0))
+    assert [trace.mode for trace in figure.data] == ["markers", "lines", "markers"]
+    report = UncertaintyReport(
+        table=pd.DataFrame(),
+        correlation=pd.DataFrame(
+            [[1.0, -0.99], [-0.99, 1.0]], index=["a", "b"], columns=["a", "b"]
+        ),
+    )
+    heatmap = plot_correlation(report).data[0]
+    assert list(heatmap.x) == ["a", "b"] and heatmap.z[0][1] == pytest.approx(-0.99)

@@ -230,3 +230,11 @@ def test_resolve_method_for_example_project():
     assert steps[1].inlet_end_mol_per_m3 == steps[1].inlet_start_mol_per_m3
     assert steps[3].inlet_start_mol_per_m3 == pytest.approx((50.0, 0.0))
     assert steps[3].inlet_end_mol_per_m3 == pytest.approx((500.0, 0.0))
+
+
+def test_text_assigned_into_nested_dicts_still_works():
+    # Item assignment in a dict field is not validated by pydantic; the unit code accepts text.
+    project = make_project()
+    project.method[1].inlet["mAb"] = "0.5 g/L"
+    load = project.resolved_method()[1]
+    assert load.inlet_start_mol_per_m3[1] == pytest.approx(0.5 / 148.0)
