@@ -18,7 +18,9 @@ def test_built_in_isotherms_are_registered():
 
 
 def test_unknown_isotherm_lists_available_ones():
-    with pytest.raises(ChromSimError, match="unknown isotherm 'SMAA'.*Langmuir, Linear, SMA"):
+    with pytest.raises(
+        ChromSimError, match="unknown isotherm 'SMAA'. Available isotherms: .*Langmuir.*SMA"
+    ):
         get_isotherm("SMAA")
 
 

@@ -107,3 +107,54 @@ def make_physics_project(
         "solver": {"n_col": n_col, "n_par": n_par},
     }
     return Project.model_validate(data)
+
+
+def make_binding_project(
+    components: list[dict],
+    isotherm: dict,
+    load: dict,
+    elute: dict | None = None,
+    column_model: str = "LRM",
+    n_col: int = 30,
+) -> Project:
+    """Small column (5 cm × 1 cm, ε_c 0.4, ε_p 0.5, Λ 500 mM): equilibrate, load, elute 60 min.
+
+    Modifiers (components in ``load`` without isotherm parameters) are present from the start;
+    ``elute`` gives their concentrations at the end of a linear elution gradient.
+    """
+    modifiers = {k: v for k, v in load.items() if k not in isotherm.get("parameters", {})}
+    elute_step = {
+        "name": "elute",
+        "duration": "60 min",
+        "flow": "1 mL/min",
+        "inlet": dict(modifiers),
+    }
+    if elute:
+        elute_step["inlet_end"] = elute
+    data = {
+        "name": "binding",
+        "components": components,
+        "column": {
+            "model": column_model,
+            "length": "5 cm",
+            "diameter": "1 cm",
+            "axial_dispersion": "1e-7 m^2/s",
+            "film_diffusion": {c["name"]: "1e-5 m/s" for c in components},
+            "pore_diffusion": {c["name"]: "1e-10 m^2/s" for c in components},
+        },
+        "resin": {
+            "name": "r",
+            "particle_radius": "30 um",
+            "ionic_capacity": "500 mM",
+            "col_porosity": 0.4,
+            "par_porosity": 0.5,
+        },
+        "isotherm": isotherm,
+        "method": [
+            {"name": "equilibrate", "duration": "1 min", "flow": "1 mL/min", "inlet": modifiers},
+            {"name": "load", "duration": "2 min", "flow": "1 mL/min", "inlet": load},
+            elute_step,
+        ],
+        "solver": {"n_col": n_col},
+    }
+    return Project.model_validate(data)

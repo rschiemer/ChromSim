@@ -229,3 +229,12 @@ def test_volume_based_duration_with_zero_flow_is_an_error():
 def test_duration_rejects_wrong_dimension():
     with pytest.raises(UnitError, match="not a duration"):
         units.duration_to_si(Quantity.parse("5 mM"), 1e-8, VOLUME_M3)
+
+
+def test_ph_pseudo_concentration():
+    # pH is carried as a pseudo-component; its "concentration" is the pH number itself.
+    ph = Quantity.parse("5.5 pH")
+    assert units.concentration_to_si(ph) == 5.5
+    assert units.concentration_from_si(5.5, "pH") == 5.5
+    with pytest.raises(UnitError, match="not a length"):
+        units.check_dimension(ph, "length")

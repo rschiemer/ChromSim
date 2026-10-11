@@ -11,27 +11,38 @@ import CADETProcess.processModel as process_model
 import pytest
 from CADETProcess.simulator import Cadet
 
+from chromsim.isotherms.cadet_native import CadetNativeIsotherm
 from chromsim.isotherms.registry import get_isotherm, list_isotherms
 
 COMPONENTS = process_model.ComponentSystem(["salt", "protein"])
 
 
-@pytest.mark.parametrize("isotherm_name", ["Linear", "Langmuir", "SMA"])
+CADET_NATIVE = [n for n in list_isotherms() if isinstance(get_isotherm(n), CadetNativeIsotherm)]
+
+
+@pytest.mark.parametrize("isotherm_name", CADET_NATIVE)
 def test_isotherm_cadet_class_and_attributes_exist(isotherm_name):
+    # Every registered CADET-native isotherm, using its own example configuration (so new
+    # isotherms are pinned automatically). tests/plugins/ runs them in simulations too.
     isotherm = get_isotherm(isotherm_name)
-    binding = getattr(process_model, isotherm.cadet_class)(COMPONENTS, name="binding")
-    example_values = {"k_eq": 1.0, "nu": 5.0, "sigma": 10.0, "q_max": 10.0}
-    parameters = {"protein": {k: v for k, v in example_values.items() if k in isotherm.parameters}}
-    values = isotherm.cadet_parameters(["salt", "protein"], parameters, 1000.0)
+    example = isotherm.example
+    names = [component["name"] for component in example["components"]]
+    binding = getattr(process_model, isotherm.cadet_class)(
+        process_model.ComponentSystem(names), name="binding"
+    )
+    values = isotherm.cadet_parameters(
+        names, example["parameters"], 1000.0, example.get("global_parameters")
+    )
     for attribute in values:
         assert attribute in binding.parameters, f"{isotherm.cadet_class} has no `{attribute}`"
     for attribute in ("is_kinetic", "bound_states"):
         assert hasattr(binding, attribute), f"{isotherm.cadet_class} has no `{attribute}`"
 
 
-def test_all_registered_cadet_isotherms_are_checked():
-    # When a new CADET-native isotherm is registered, add it to the parametrisation above.
-    assert set(list_isotherms()) == {"Linear", "Langmuir", "SMA"}
+def test_built_in_cadet_isotherms_are_all_pinned():
+    expected = {"Linear", "Langmuir", "SMA", "GIEX", "MPM", "BiLangmuir"}
+    expected |= {"HICConstantWaterActivity", "HICWaterOnHydrophobicSurfaces"}
+    assert expected <= set(CADET_NATIVE)
 
 
 def test_no_binding_class_exists():

@@ -41,10 +41,9 @@ def test_lrm_needs_only_axial_dispersion():
     check_simulatable(project)  # no error
 
 
-def test_unknown_and_reference_backends():
-    with pytest.raises(SimulationSetupError, match="Phase 5"):
-        get_backend("reference")
-    with pytest.raises(SimulationSetupError, match="Unknown backend 'cadett'"):
+def test_unknown_backend():
+    assert get_backend("reference").name == "reference"
+    with pytest.raises(SimulationSetupError, match="Unknown backend 'cadett'.*cadet, reference"):
         get_backend("cadett")
 
 

@@ -5,9 +5,16 @@ See SPEC §4. Use :func:`get_backend` to pick one by the name in ``project.solve
 
 from chromsim.backends.base import SimulationResult, SimulatorBackend
 from chromsim.backends.cadet_backend import CadetBackend
+from chromsim.backends.reference import ReferenceBackend
 from chromsim.errors import SimulationSetupError
 
-__all__ = ["CadetBackend", "SimulationResult", "SimulatorBackend", "get_backend"]
+__all__ = [
+    "CadetBackend",
+    "ReferenceBackend",
+    "SimulationResult",
+    "SimulatorBackend",
+    "get_backend",
+]
 
 
 def get_backend(name: str) -> SimulatorBackend:
@@ -16,12 +23,10 @@ def get_backend(name: str) -> SimulatorBackend:
     Raises
     ------
     SimulationSetupError
-        For unknown names, and for ``"reference"`` until it is implemented (SPEC Phase 5).
+        For unknown names.
     """
     if name == "cadet":
         return CadetBackend()
     if name == "reference":
-        raise SimulationSetupError(
-            "The reference backend is not implemented yet (SPEC Phase 5); use `backend: cadet`."
-        )
-    raise SimulationSetupError(f"Unknown backend '{name}'; available: cadet.")
+        return ReferenceBackend()
+    raise SimulationSetupError(f"Unknown backend '{name}'; available: cadet, reference.")

@@ -112,7 +112,12 @@ def _binding_model(project: Project, component_system):
     binding = binding_class(component_system, name="binding")
     binding.bound_states = isotherm.bound_states(names, parameters)
     binding.is_kinetic = isotherm.is_kinetic(parameters)
-    values = isotherm.cadet_parameters(names, parameters, project.resin.ionic_capacity_mol_per_m3)
+    values = isotherm.cadet_parameters(
+        names,
+        parameters,
+        project.resin.ionic_capacity_mol_per_m3,
+        project.isotherm.global_parameters or {},
+    )
     for attribute, value in values.items():
         setattr(binding, attribute, value)
     return binding

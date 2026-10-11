@@ -57,6 +57,9 @@ from chromsim.errors import UnitError
 ureg = pint.UnitRegistry()
 
 COLUMN_VOLUME_UNIT = "CV"
+# pH as a pseudo-component "concentration" (CLAUDE.md: placed directly after salt). Its value is
+# the pH number itself and is passed to CADET unchanged.
+PH_UNIT = "pH"
 
 # Dimension name -> SI unit. The SI unit also defines the dimension (e.g. m**3/s = volume/time).
 SI_UNITS = {
@@ -91,6 +94,7 @@ EXAMPLE_UNITS = {
     "pressure": "MPa or bar",
     "dimensionless": "dimensionless",
     "column_volumes": "CV",
+    "ph": "pH",
 }
 
 _NUMBER_THEN_UNIT = re.compile(r"^\s*([-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?)\s*(.*?)\s*$")
@@ -153,7 +157,7 @@ class Quantity(BaseModel):
     @classmethod
     def _known_unit(cls, unit: str) -> str:
         unit = unit.strip()
-        if unit == COLUMN_VOLUME_UNIT:
+        if unit in (COLUMN_VOLUME_UNIT, PH_UNIT):
             return unit
         try:
             ureg.Quantity(1.0, unit)
@@ -225,10 +229,13 @@ def check_dimension(quantity: Quantity, *allowed: str, what: str | None = None) 
     if quantity.unit == COLUMN_VOLUME_UNIT:
         if "column_volumes" in allowed:
             return "column_volumes"
+    elif quantity.unit == PH_UNIT:
+        if "ph" in allowed:
+            return "ph"
     else:
         dimensionality = ureg.Quantity(1.0, quantity.unit).dimensionality
         for dimension in allowed:
-            if dimension == "column_volumes":
+            if dimension in ("column_volumes", "ph"):
                 continue
             if dimensionality == ureg.Quantity(1.0, SI_UNITS[dimension]).dimensionality:
                 return dimension
@@ -328,9 +335,12 @@ def concentration_to_si(quantity: Quantity, molar_mass_kg_per_mol: float | None 
         If the quantity is not a concentration, or is a mass concentration and no molar mass
         is given.
     """
+    quantity = Quantity.parse(quantity)
     dimension = check_dimension(
-        quantity, "molar_concentration", "mass_concentration", what="concentration"
+        quantity, "molar_concentration", "mass_concentration", "ph", what="concentration"
     )
+    if dimension == "ph":
+        return quantity.magnitude
     if dimension == "molar_concentration":
         return to_si(quantity, "molar_concentration")
     if molar_mass_kg_per_mol is None:
@@ -362,8 +372,11 @@ def concentration_from_si(value_mol_per_m3, unit: str, molar_mass_kg_per_mol: fl
         Quantity(magnitude=1.0, unit=unit),
         "molar_concentration",
         "mass_concentration",
+        "ph",
         what="concentration",
     )
+    if dimension == "ph":
+        return value_mol_per_m3 * 1.0
     if dimension == "molar_concentration":
         return value_mol_per_m3 * from_si(1.0, unit)
     if molar_mass_kg_per_mol is None:
@@ -568,7 +581,9 @@ FlowRate = Annotated[
 ]
 Concentration = Annotated[
     Quantity,
-    AfterValidator(_require("molar_concentration", "mass_concentration", what="concentration")),
+    AfterValidator(
+        _require("molar_concentration", "mass_concentration", "ph", what="concentration")
+    ),
 ]
 MolarConcentration = Annotated[Quantity, AfterValidator(_require("molar_concentration"))]
 Diffusivity = Annotated[Quantity, AfterValidator(_require("diffusivity"))]

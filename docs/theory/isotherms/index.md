@@ -5,6 +5,12 @@
 | `Linear` | [Linear](linear.md) | low loading, tracers, Henry constants |
 | `Langmuir` | [Langmuir](langmuir.md) | affinity resins, single- and multi-component saturation |
 | `SMA` | [Steric mass action](sma.md) | ion exchange with salt gradients |
+| `GIEX` | [Generalized ion exchange](giex.md) | ion exchange with salt **and pH** dependence |
+| `MPM` | [Mobile phase modulator Langmuir](mpm.md) | HIC; mixed-mode approximation |
+| `HICConstantWaterActivity` | [HIC, constant water activity](hic_constant_water_activity.md) | HIC |
+| `HICWaterOnHydrophobicSurfaces` | [HIC, water on hydrophobic surfaces](hic_water_on_hydrophobic_surfaces.md) | HIC |
+| `BiLangmuir` | [Bi-Langmuir](bi_langmuir.md) | affinity resins with two site types |
+| `MixedModeLangmuir` | [Mixed-mode Langmuir](mixed_mode_langmuir.md) | Python example; reference backend |
 
 **Conventions shared by all isotherms**
 
@@ -14,5 +20,8 @@
 - `k_eq` is the equilibrium constant k_a/k_d. `k_kin` is the desorption rate constant k_d in
   1/s, so k_a = k_eq·k_kin. Without `k_kin` the isotherm is solved in rapid equilibrium. Give
   `k_kin` for all binding components or for none.
-- Parameter values are plain numbers in the units listed on each page. All of them coincide with
-  SI (mol/m³ = mM, m³/mol = 1/mM, 1/s).
+- Parameter values are plain numbers in the units listed on each page; they coincide with SI
+  (mol/m³ = mM, m³/mol = 1/mM, 1/s).
+- Isotherm-wide parameters (e.g. HIC β₀, β₁) go under `isotherm.global_parameters`.
+- Modifiers come first: salt is component 0 for SMA, GIEX, MPM and HIC models; for GIEX the pH
+  pseudo-component is component 1 (inlet unit `pH`).

@@ -35,12 +35,15 @@ class IsothermConfig(BaseModel):
         Component name → {parameter name → value}. Every binding component has its own set;
         components without a set do not bind. Units are documented by each isotherm
         (docs/theory/isotherms/).
+    global_parameters : dict[str, float], optional
+        Parameters of the whole isotherm rather than of one component (e.g. HIC β₀, β₁).
     """
 
     model_config = MODEL_CONFIG
 
     model: str
     parameters: dict[str, dict[str, float]] = Field(default_factory=dict)
+    global_parameters: dict[str, float] | None = None
 
 
 class SolverSettings(BaseModel):
@@ -153,7 +156,7 @@ class Project(BaseModel):
                         )
                     is_mass = (
                         units.check_dimension(
-                            concentration, "molar_concentration", "mass_concentration"
+                            concentration, "molar_concentration", "mass_concentration", "ph"
                         )
                         == "mass_concentration"
                     )
@@ -172,7 +175,9 @@ class Project(BaseModel):
                 )
 
         isotherm = get_isotherm(self.isotherm.model)
-        validate_parameters(isotherm, names, self.isotherm.parameters)
+        validate_parameters(
+            isotherm, names, self.isotherm.parameters, self.isotherm.global_parameters
+        )
         if isotherm.requires_ionic_capacity and self.resin.ionic_capacity is None:
             raise ValueError(
                 f"{isotherm.name} needs resin.ionic_capacity; add e.g. `ionic_capacity: 1200 mM`."

@@ -19,6 +19,8 @@ Bound-phase concentrations q are per volume of solid phase (mol/m³), as in CADE
 from abc import ABC, abstractmethod
 from typing import ClassVar
 
+import numpy as np
+
 from chromsim.isotherms.base import Parameter
 from chromsim.isotherms.registry import register_isotherm
 
@@ -43,10 +45,15 @@ class CadetNativeIsotherm(ABC):
     parameters: ClassVar[dict[str, Parameter]]
     requires_salt: ClassVar[bool] = False
     requires_ionic_capacity: ClassVar[bool] = False
+    n_modifiers: ClassVar[int] = 0
+
+    # Minimal configuration used by the plugin contract tests (tests/plugins/): components, binding
+    # parameters and inlet concentrations of a load–elute run that elutes everything.
+    example: ClassVar[dict]
 
     def is_kinetic(self, parameters: dict[str, dict[str, float]]) -> bool:
-        """``True`` if binding is kinetic (``k_kin`` given), ``False`` for rapid equilibrium."""
-        return any("k_kin" in values for values in parameters.values())
+        """``True`` if binding is kinetic (``k_kin…`` given), ``False`` for rapid equilibrium."""
+        return any(name.startswith("k_kin") for values in parameters.values() for name in values)
 
     def bound_states(
         self, component_names: list[str], parameters: dict[str, dict[str, float]]
@@ -76,6 +83,7 @@ class CadetNativeIsotherm(ABC):
         component_names: list[str],
         parameters: dict[str, dict[str, float]],
         ionic_capacity_mol_per_m3: float | None,
+        global_parameters: dict[str, float] | None = None,
     ) -> dict:
         """Values for the CADET-Process binding model attributes.
 
@@ -87,6 +95,8 @@ class CadetNativeIsotherm(ABC):
             Component name → {parameter → value}; components without an entry don't bind.
         ionic_capacity_mol_per_m3 : float or None
             Resin ionic capacity Λ, mol/m³.
+        global_parameters : dict, optional
+            Isotherm-wide parameters (see ``Parameter.per_component``).
 
         Returns
         -------
@@ -124,6 +134,12 @@ class Linear(CadetNativeIsotherm):
 
     name = "Linear"
     cadet_class = "Linear"
+    example = {
+        "components": [{"name": "A"}],
+        "parameters": {"A": {"k_eq": 2.0, "k_kin": 1.0}},
+        "load": {"A": "1 mM"},
+        "elute": {},
+    }
     parameters = {
         "k_eq": Parameter(
             unit="dimensionless",
@@ -133,7 +149,9 @@ class Linear(CadetNativeIsotherm):
         "k_kin": K_KIN,
     }
 
-    def cadet_parameters(self, component_names, parameters, ionic_capacity_mol_per_m3):
+    def cadet_parameters(
+        self, component_names, parameters, ionic_capacity_mol_per_m3, global_parameters=None
+    ):
         return {
             "adsorption_rate": per_component(
                 component_names, parameters, lambda v: rate_constants(v)[0]
@@ -142,6 +160,11 @@ class Linear(CadetNativeIsotherm):
                 component_names, parameters, lambda v: rate_constants(v)[1]
             ),
         }
+
+    def flux(self, c, q, p):
+        """dq/dt = k_a c − k_d q (reference backend; kinetic form)."""
+        k_a, k_d = p["k_eq"] * p["k_kin"], p["k_kin"]
+        return k_a * c - k_d * q
 
 
 @register_isotherm
@@ -159,6 +182,12 @@ class Langmuir(CadetNativeIsotherm):
 
     name = "Langmuir"
     cadet_class = "Langmuir"
+    example = {
+        "components": [{"name": "A"}],
+        "parameters": {"A": {"k_eq": 1.0, "q_max": 10.0, "k_kin": 1.0}},
+        "load": {"A": "1 mM"},
+        "elute": {},
+    }
     parameters = {
         "k_eq": Parameter(
             unit="m^3/mol", description="equilibrium constant k_a/k_d (= 1/mM)", log_scale=True
@@ -167,7 +196,9 @@ class Langmuir(CadetNativeIsotherm):
         "k_kin": K_KIN,
     }
 
-    def cadet_parameters(self, component_names, parameters, ionic_capacity_mol_per_m3):
+    def cadet_parameters(
+        self, component_names, parameters, ionic_capacity_mol_per_m3, global_parameters=None
+    ):
         return {
             "adsorption_rate": per_component(
                 component_names, parameters, lambda v: rate_constants(v)[0]
@@ -177,6 +208,13 @@ class Langmuir(CadetNativeIsotherm):
             ),
             "capacity": per_component(component_names, parameters, lambda v: v["q_max"]),
         }
+
+    def flux(self, c, q, p):
+        """dq_i/dt = k_a c_i q_max,i (1 − Σ q_j/q_max,j) − k_d q_i (reference backend)."""
+        k_a, k_d, q_max = p["k_eq"] * p["k_kin"], p["k_kin"], p["q_max"]
+        binding = p.binding
+        free = 1.0 - np.sum(q[binding] / q_max[binding], axis=0)
+        return np.where(binding[:, np.newaxis], k_a * c * q_max * free - k_d * q, 0.0)
 
 
 @register_isotherm
@@ -203,8 +241,15 @@ class StericMassAction(CadetNativeIsotherm):
 
     name = "SMA"
     cadet_class = "StericMassAction"
+    example = {
+        "components": [{"name": "salt"}, {"name": "A"}],
+        "parameters": {"A": {"k_eq": 1e-2, "nu": 5.0, "sigma": 20.0, "k_kin": 10.0}},
+        "load": {"salt": "50 mM", "A": "0.1 mM"},
+        "elute": {"salt": "1000 mM"},
+    }
     requires_salt = True
     requires_ionic_capacity = True
+    n_modifiers = 1
     parameters = {
         "k_eq": Parameter(unit="dimensionless", description="equilibrium constant", log_scale=True),
         "nu": Parameter(unit="dimensionless", description="characteristic charge", bounds=(0, 50)),
@@ -226,7 +271,9 @@ class StericMassAction(CadetNativeIsotherm):
         q[0] = float(ionic_capacity_mol_per_m3)
         return q
 
-    def cadet_parameters(self, component_names, parameters, ionic_capacity_mol_per_m3):
+    def cadet_parameters(
+        self, component_names, parameters, ionic_capacity_mol_per_m3, global_parameters=None
+    ):
         capacity = float(ionic_capacity_mol_per_m3)
         return {
             "adsorption_rate": per_component(
@@ -241,3 +288,27 @@ class StericMassAction(CadetNativeIsotherm):
             "reference_liquid_phase_conc": capacity,
             "reference_solid_phase_conc": capacity,
         }
+
+    def flux(self, c, q, p):
+        """SMA kinetics with c_ref = q_ref = Λ (reference backend).
+
+        dq_i/dt = k_a c_i (q̄_0/Λ)^ν_i − k_d q_i (c_0/Λ)^ν_i for binding i, with
+        q̄_0 = q_0 − Σ σ_j q_j; the bound salt follows from electroneutrality,
+        dq_0/dt = −Σ ν_j dq_j/dt.
+        """
+        capacity = p.ionic_capacity
+        nu, sigma = p["nu"], p["sigma"]
+        k_a, k_d = p["k_eq"] * p["k_kin"], p["k_kin"]
+        binding = p.binding.copy()
+        binding[0] = False  # salt
+        # q̄_0 = q_0 − Σ σ_j q_j with the bound salt q_0 as a state (= Λ − Σ ν_j q_j, kept
+        # consistent by dq_0/dt below). Using q_0 here, as CADET does, keeps it a live state.
+        free_sites = q[0] - np.sum(sigma[binding] * q[binding], axis=0)
+        salt = np.maximum(c[0], 0.0)
+        rate = (
+            k_a * c * (np.maximum(free_sites, 0.0) / capacity) ** nu
+            - k_d * q * (salt / capacity) ** nu
+        )
+        dq = np.where(binding[:, np.newaxis], rate, 0.0)
+        dq[0] = -np.sum(nu[binding] * dq[binding], axis=0)
+        return dq

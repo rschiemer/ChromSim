@@ -40,6 +40,7 @@ nav:
       - Experimental data: user_guide/experimental_data.md
       - Calibrating a model: user_guide/calibration.md
   - How-to:
+      - Add an isotherm: how_to/add_isotherm.md
       - Add a chromatogram importer: how_to/add_importer.md
   - Theory:
       - Isotherms:
@@ -47,6 +48,12 @@ nav:
           - Linear: theory/isotherms/linear.md
           - Langmuir: theory/isotherms/langmuir.md
           - Steric mass action: theory/isotherms/sma.md
+          - Generalized ion exchange: theory/isotherms/giex.md
+          - Mobile phase modulator: theory/isotherms/mpm.md
+          - HIC constant water activity: theory/isotherms/hic_constant_water_activity.md
+          - HIC water on hydrophobic surfaces: theory/isotherms/hic_water_on_hydrophobic_surfaces.md
+          - Bi-Langmuir: theory/isotherms/bi_langmuir.md
+          - Mixed-mode Langmuir (Python): theory/isotherms/mixed_mode_langmuir.md
       - Yamamoto method: theory/yamamoto.md
   - API reference: api/index.md
   - Decisions:
