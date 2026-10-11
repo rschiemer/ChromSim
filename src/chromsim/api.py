@@ -64,7 +64,21 @@ from chromsim.estimation.workflows.yamamoto import (
     yamamoto_fit,
 )
 from chromsim.io.project_file import load_project, project_from_yaml, project_to_yaml, save_project
+from chromsim.io.results import (
+    read_optimization_result,
+    read_simulation_result,
+    write_optimization_result,
+    write_simulation_result,
+)
 from chromsim.isotherms.registry import list_isotherms
+from chromsim.optimizers import (
+    Constraint,
+    OptimizationProblem,
+    OptimizationResult,
+    Variable,
+    get_optimizer,
+    list_optimizers,
+)
 from chromsim.plotting import (
     plot_chromatogram,
     plot_correlation,
@@ -165,6 +179,19 @@ __all__ = [
     "UncertaintyReport",
     "parameter_uncertainty",
     "plot_correlation",
+    # optimization
+    "Constraint",
+    "OptimizationProblem",
+    "OptimizationResult",
+    "Variable",
+    "get_optimizer",
+    "list_optimizers",
+    "optimize",
+    # result files
+    "read_optimization_result",
+    "read_simulation_result",
+    "write_optimization_result",
+    "write_simulation_result",
 ]
 
 
@@ -228,3 +255,28 @@ def check_discretisation(project: Project) -> DiscretisationCheck:
         NRMSE per component between the two grids; well below 0.01 means the grid is fine enough.
     """
     return _check_discretisation(project)
+
+
+def optimize(
+    problem: OptimizationProblem, optimizer: str = "least_squares", callback=None, **options
+) -> OptimizationResult:
+    """Solve an optimization problem with a registered optimizer (SPEC §6).
+
+    Parameters
+    ----------
+    problem : OptimizationProblem
+        Variables, objectives and/or residuals, constraints, parallelism.
+    optimizer : str
+        Name from :func:`list_optimizers` (e.g. ``"least_squares"``, ``"nsga2"``).
+    callback : callable, optional
+        ``callback(evaluation_number, objectives)`` after every evaluation.
+    **options
+        Optimizer options, e.g. ``n_gen=100`` for ``nsga2``.
+
+    Returns
+    -------
+    OptimizationResult
+        Best point, objectives, full evaluation history (and Pareto set for multi-objective
+        optimizers).
+    """
+    return get_optimizer(optimizer, **options).optimize(problem, callback=callback)

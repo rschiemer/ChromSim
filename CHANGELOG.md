@@ -7,6 +7,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ## [Unreleased]
 
 ### Added
+- Phase 5 plugins:
+  - CADET-native isotherms GIEX (salt + pH), MPM Langmuir, HIC constant water activity, HIC
+    water on hydrophobic surfaces, Bi-Langmuir; pH pseudo-concentration unit `pH`;
+    `isotherm.global_parameters`.
+  - Python isotherms (`PythonIsotherm.flux`) and the worked example `MixedModeLangmuir`.
+  - Reference backend (LRM/LRMP, mixer, tubing) in numpy/scipy; ≤ 1 % NRMSE against CADET.
+  - Optimizer interface (SPEC §6) with registry and adapters `least_squares`, `nelder_mead`,
+    `lbfgsb`, `differential_evolution`, `nsga2`, `unsga3`; scaled space, history, callbacks,
+    caching and parallel batch evaluation; `api.optimize`.
+  - `inverse_fit(..., optimizer=, parallel=)` on the optimizer interface.
+  - HDF5 result files with provenance: `write/read_simulation_result`,
+    `write/read_optimization_result` (full evaluation history).
+  - Contract tests auto-applied to every registered isotherm and optimizer; exact isotherm
+    equivalence tests; reference-vs-CADET benchmark.
+- Docs: theory pages for all new isotherms, how-tos "Add an isotherm" and "Add an optimizer",
+  ADR 0008 (reference backend, route to production), ADR 0009 (optimizer interface).
 - Phase 4 calibration:
   - Peak analysis (`analysis/peaks.py`): moments with injection correction, plate number, HETP,
     asymmetry factor, sub-grid peak maximum.

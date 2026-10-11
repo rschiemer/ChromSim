@@ -6,22 +6,20 @@ fraction-assay results match the measurements, in the weighted least-squares sen
 .. math:: \\min_x \\; \\tfrac12 \\sum_{e} \\sum_{t \\in e} \\lVert r_{e,t}(x) \\rVert^2
 
 Parameters are either shared by all experiments (e.g. isotherm parameters) or estimated per
-experiment (e.g. a load concentration, ``per_experiment=True``). The search runs in the scaled
-space x ∈ [0, 1] with scipy's trust-region-reflective least squares (finite-difference Jacobian).
+experiment (e.g. a load concentration, ``per_experiment=True``). The fit is an
+:class:`~chromsim.optimizers.OptimizationProblem` solved by any registered optimizer (default
+``least_squares``: scipy's trust-region-reflective method), in the scaled space x ∈ [0, 1]. With
+``parallel=N`` the finite-difference Jacobian columns are simulated in N processes.
 ``multi_start`` adds random starting points to reduce the risk of a local minimum.
-
-Phase 5 routes this through the optimizer plugin interface (SPEC §6); the call signature stays.
 
 Reference: Branch, Coleman & Li, SIAM J. Sci. Comput. 21 (1999) 1 (TRF algorithm).
 """
 
 import logging
-import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
 import numpy as np
-from scipy.optimize import least_squares
 
 from chromsim.backends import get_backend
 from chromsim.backends.base import SimulationResult
@@ -29,14 +27,14 @@ from chromsim.core.project import Project
 from chromsim.errors import ChromSimError
 from chromsim.estimation.objectives import FitExperiment
 from chromsim.estimation.parameters import FitParameter, get_value, set_values
+from chromsim.optimizers import OptimizationProblem, Variable, get_optimizer
+from chromsim.optimizers.base import ScaledProblem
+from chromsim.optimizers.scipy_opt import finite_difference_jacobian
 
 logger = logging.getLogger(__name__)
 
 # Residual assigned to every point when a simulation fails, so the optimiser backs away.
 FAILED_SIMULATION_RESIDUAL = 10.0
-# Finite-difference step in the scaled space: 0.1 % of each parameter's range (log range for log
-# parameters). Large against CADET's relative tolerance (1e-6), small against curvature.
-DIFF_STEP = 1e-3
 
 
 @dataclass
@@ -112,35 +110,31 @@ def _expand(parameters, experiment_names):
     return labels, owners, experiment_of
 
 
-class _Objective:
-    """Residual function over x; simulates every experiment with the parameters applied."""
+class FitResiduals:
+    """Residuals of all experiments for physical parameter values (picklable for workers)."""
 
-    def __init__(self, experiments, parameters, callback):
+    def __init__(self, experiments, owners, experiment_of):
         self.experiments = experiments
-        self.parameters = parameters
-        self.names = [experiment.name for experiment in experiments]
-        self.labels, self.owners, self.experiment_of = _expand(parameters, self.names)
-        self.callback = callback
-        self.start = time.perf_counter()
-        self.history: list[tuple[float, float]] = []
-        self.n_evaluations = 0
-        self.size: int | None = None
+        self.owners = owners
+        self.experiment_of = experiment_of
+        self.size: int | None = None  # set after the first successful evaluation
 
-    def projects(self, x) -> dict[str, Project]:
+    def projects(self, theta) -> dict[str, Project]:
         projects = {}
         for experiment in self.experiments:
-            assignments = []
-            for x_index, parameter in enumerate(self.owners):
-                if self.experiment_of[x_index] not in (None, experiment.name):
-                    continue
-                assignments.append(
-                    (parameter.path, parameter.from_scaled(x[x_index]), parameter.unit)
+            assignments = [
+                (parameter.path, float(value), parameter.unit)
+                for parameter, owner, value in zip(
+                    self.owners, self.experiment_of, theta, strict=True
                 )
+                if owner in (None, experiment.name)
+            ]
             projects[experiment.name] = set_values(experiment.project, assignments)
         return projects
 
-    def evaluate(self, x):
-        projects = self.projects(x)
+    def evaluate(self, theta):
+        """Residuals, fitted projects and simulation results at physical parameter values."""
+        projects = self.projects(theta)
         results, pieces = {}, []
         for experiment in self.experiments:
             project = projects[experiment.name]
@@ -149,20 +143,15 @@ class _Objective:
             pieces += [target.residuals(result, project) for target in experiment.targets]
         return np.concatenate(pieces), projects, results
 
-    def __call__(self, x):
-        self.n_evaluations += 1
+    def __call__(self, theta) -> np.ndarray:
         try:
-            residuals = self.evaluate(x)[0]
-            self.size = residuals.size
+            residuals = self.evaluate(theta)[0]
         except ChromSimError as error:
             if self.size is None:
                 raise
-            logger.warning("Simulation failed at x=%s (%s); penalised.", np.round(x, 4), error)
-            residuals = np.full(self.size, FAILED_SIMULATION_RESIDUAL)
-        cost = 0.5 * float(residuals @ residuals)
-        self.history.append((time.perf_counter() - self.start, cost))
-        if self.callback is not None:
-            self.callback(self.n_evaluations, cost)
+            logger.warning("Simulation failed at %s (%s); penalised.", np.round(theta, 6), error)
+            return np.full(self.size, FAILED_SIMULATION_RESIDUAL)
+        self.size = residuals.size
         return residuals
 
 
@@ -173,6 +162,8 @@ def inverse_fit(
     seed: int = 0,
     max_evaluations: int = 200,
     callback: Callable[[int, float], None] | None = None,
+    optimizer: str = "least_squares",
+    parallel: int = 1,
 ) -> FitResult:
     """Estimate parameters from one or more experiments.
 
@@ -181,15 +172,20 @@ def inverse_fit(
     experiments : list of FitExperiment
         Each with its project and targets (``SignalTarget``, ``AssayTarget``).
     parameters : list of FitParameter
-        Parameters to estimate; start values default to the first experiment's project.
+        Parameters to estimate; start values default to the experiments' projects.
     multi_start : int
         Number of additional random starting points (uniform in the scaled space).
     seed : int
         Random seed for the extra starts.
     max_evaluations : int
-        Maximum residual evaluations per start.
+        Maximum residual evaluations per start (passed to the optimizer).
     callback : callable, optional
         Called as ``callback(evaluation_number, cost)`` after every evaluation (progress bars).
+    optimizer : str
+        Registered single-objective optimizer (``least_squares``, ``nelder_mead``, ``lbfgsb``,
+        ``differential_evolution`` …).
+    parallel : int
+        Number of processes for simultaneous simulations (Jacobian columns, populations).
 
     Returns
     -------
@@ -202,11 +198,9 @@ def inverse_fit(
     if len(set(names)) != len(names):
         raise ChromSimError("Experiment names must be unique.")
 
-    objective = _Objective(experiments, parameters, callback)
-    x0 = []
-    for parameter, label, owner in zip(
-        objective.owners, objective.labels, objective.experiment_of, strict=True
-    ):
+    labels, owners, experiment_of = _expand(parameters, names)
+    start_values = []
+    for parameter, label, owner in zip(owners, labels, experiment_of, strict=True):
         if parameter.initial is not None:
             value = parameter.initial
         else:
@@ -217,46 +211,58 @@ def inverse_fit(
                 f"Start value {value:g} of '{label}' is outside its bounds "
                 f"[{parameter.lower:g}, {parameter.upper:g}]; set initial= or widen the bounds."
             )
-        x0.append(parameter.to_scaled(value))
+        start_values.append(value)
+
+    residuals = FitResiduals(experiments, owners, experiment_of)
+    residuals(np.array(start_values))  # fixes the residual size for failure penalties
 
     rng = np.random.default_rng(seed)
-    starting_points = [np.array(x0)] + [rng.uniform(0.0, 1.0, len(x0)) for _ in range(multi_start)]
-    best, starts = None, []
-    for start in starting_points:
-        solution = least_squares(
-            objective,
-            start,
-            bounds=(0.0, 1.0),
-            method="trf",
-            diff_step=DIFF_STEP,
-            max_nfev=max_evaluations,
-        )
-        starts.append((start, float(solution.cost)))
-        logger.info(
-            "Start %s → cost %.4g (%s)", np.round(start, 3), solution.cost, solution.message
-        )
-        if best is None or solution.cost < best.cost:
-            best = solution
+    first = np.array([p.to_scaled(v) for p, v in zip(owners, start_values, strict=True)])
+    starts = [first] + [rng.uniform(0.0, 1.0, len(first)) for _ in range(multi_start)]
+    options = {"max_evaluations": max_evaluations} if optimizer != "differential_evolution" else {}
+    history, start_costs, best = [], [], None
+    evaluations_so_far = 0
+    for start in starts:
+        variables = [
+            Variable(label, p.lower, p.upper, log_scale=p.scale == "log", initial=p.from_scaled(x))
+            for label, p, x in zip(labels, owners, start, strict=True)
+        ]
+        problem = OptimizationProblem(variables, residuals=residuals, parallel=parallel)
+
+        def progress(n, f, offset=evaluations_so_far):
+            if callback is not None:
+                callback(offset + n, float(f[0]))
+
+        outcome = get_optimizer(optimizer, **options).optimize(problem, callback=progress)
+        evaluations_so_far += outcome.n_evaluations
+        history += [(e.time_s, float(e.f[0])) for e in outcome.history]
+        start_costs.append((start, float(outcome.f[0])))
+        logger.info("Start %s → cost %.4g (%s)", np.round(start, 3), outcome.f[0], outcome.message)
+        if best is None or outcome.f[0] < best[1].f[0]:
+            best = (problem, outcome)
 
     assert best is not None  # there is always at least one start
-    residuals, projects, results = objective.evaluate(best.x)
-    values = {
-        label: float(parameter.from_scaled(x))
-        for label, parameter, x in zip(objective.labels, objective.owners, best.x, strict=True)
-    }
+    problem, outcome = best
+    final_residuals, projects, results = residuals.evaluate(outcome.x)
+    x_scaled = np.array(
+        [v.to_scaled(value) for v, value in zip(problem.variables, outcome.x, strict=True)]
+    )
+    jacobian = outcome.jacobian
+    if jacobian is None:  # optimizer without a Jacobian: compute it at the optimum for uncertainty
+        jacobian = finite_difference_jacobian(ScaledProblem(problem), x_scaled, final_residuals)
     return FitResult(
         parameters=list(parameters),
         experiment_names=names,
-        values=values,
-        x=best.x,
-        cost=0.5 * float(residuals @ residuals),
-        residuals=residuals,
-        jacobian=best.jac,
+        values={label: float(value) for label, value in zip(labels, outcome.x, strict=True)},
+        x=x_scaled,
+        cost=0.5 * float(final_residuals @ final_residuals),
+        residuals=final_residuals,
+        jacobian=jacobian,
         projects=projects,
         results=results,
-        n_evaluations=objective.n_evaluations,
-        success=bool(best.success),
-        message=str(best.message),
-        history=objective.history,
-        starts=starts,
+        n_evaluations=evaluations_so_far,
+        success=outcome.success,
+        message=outcome.message,
+        history=history,
+        starts=start_costs,
     )

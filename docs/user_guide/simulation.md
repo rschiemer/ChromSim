@@ -58,3 +58,23 @@ print(check.nrmse)   # per component, project grid vs doubled grid
 
 If the NRMSE is well below 1 %, the grid is fine enough. Otherwise increase `solver.n_col` (and
 `n_par` for the GRM).
+
+## Backends
+
+`solver.backend` chooses the simulator:
+
+| Backend | Columns | Isotherms | Use |
+|---|---|---|---|
+| `cadet` (default) | LRM, LRMP, GRM | all CADET-native ones | everything |
+| `reference` | LRM, LRMP | Python isotherms, and Linear, Langmuir, SMA (kinetic) | custom isotherms, cross-checks, teaching |
+
+The reference backend is a readable numpy/scipy implementation (`src/chromsim/backends/reference/`,
+one file per operator). It agrees with CADET to ≤ 1 % NRMSE (ADR 0008). It needs `k_kin` for
+every binding component.
+
+## Saving results
+
+```python
+api.write_simulation_result(result, "run01.h5")      # HDF5 with provenance
+result = api.read_simulation_result("run01.h5")
+```

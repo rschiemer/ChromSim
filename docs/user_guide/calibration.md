@@ -77,5 +77,17 @@ parameters), the correlation matrix, and flags for |R| > 0.95 and for parameters
     parameters together, fit on the grid you will predict with, and add experiments that separate
     the parameters (several gradient slopes, isocratic runs).
 
-The optimizer is scipy's trust-region-reflective least squares. Phase 5 routes it through the
-optimizer plugin interface without changing these functions.
+## Optimizers and parallel fits
+
+`inverse_fit(..., optimizer="least_squares", parallel=1)`:
+
+| Optimizer | Kind | Notes |
+|---|---|---|
+| `least_squares` (default) | local, least squares | trust-region-reflective; Jacobian columns in parallel |
+| `nelder_mead` | local, derivative-free | robust for small, noisy problems |
+| `lbfgsb` | local, gradient | central-difference gradient in parallel |
+| `differential_evolution` | global | many simulations; use with `parallel` |
+
+With `parallel=N`, simultaneous simulations run in N processes. Fits don't depend on this
+setting: the same evaluations are made, only faster. `api.list_optimizers()` lists all
+optimizers, including the multi-objective `nsga2` and `unsga3` used for process optimization.

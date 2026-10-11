@@ -41,6 +41,7 @@ nav:
       - Calibrating a model: user_guide/calibration.md
   - How-to:
       - Add an isotherm: how_to/add_isotherm.md
+      - Add an optimizer: how_to/add_optimizer.md
       - Add a chromatogram importer: how_to/add_importer.md
   - Theory:
       - Isotherms:
@@ -64,6 +65,8 @@ nav:
       - 0005 CADET backend conventions: decisions/0005-cadet-backend-conventions.md
       - 0006 openpyxl: decisions/0006-openpyxl.md
       - 0007 Calibration conventions: decisions/0007-calibration-conventions.md
+      - 0008 Reference backend: decisions/0008-reference-backend.md
+      - 0009 Optimizer interface: decisions/0009-optimizer-interface.md
 
 extra_javascript:
   - javascripts/mathjax.js
