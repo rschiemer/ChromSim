@@ -385,6 +385,8 @@ class OptimizerBase(ABC):
 ### 7.4 Process analysis & optimization
 - Fractionation via CADET-Process (cut points, pooling), KPIs: yield, purity, productivity,
   buffer consumption, concentration in pool.
+  *Implemented in ChromSim on the backend-independent `SimulationResult` and checked against
+  CADET-Process's Fractionator by a parity test (ADR 0010, approved 2026-10-11).*
 - Example optimization: gradient length + end salt + cut points to maximise yield subject to
   purity ≥ X %; 2-objective yield vs. productivity Pareto front.
 

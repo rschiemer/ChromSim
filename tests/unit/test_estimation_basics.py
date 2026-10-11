@@ -176,3 +176,10 @@ def test_log_parameters_have_positive_asymmetric_intervals_and_bounds_are_flagge
     assert not row["at_bound"]
     fit.x = np.array([0.9999])
     assert parameter_uncertainty(fit).table.iloc[0]["at_bound"]
+
+
+def test_get_value_in_column_volumes():
+    project = make_project()
+    assert get_value(project, "method.3.duration", unit="CV") == pytest.approx(20.0)
+    with pytest.raises(ChromSimError, match='unit="CV"'):
+        get_value(project, "method.3.duration", unit="mL")

@@ -98,13 +98,23 @@ class NelderMead(OptimizerBase):
 
     name = "nelder_mead"
     capabilities = {"bounds"}
-    default_options = {"max_evaluations": 400, "x_tol": 1e-6, "f_tol": 1e-10}
+    # initial_step: size of the starting simplex in the scaled space (fraction of each range).
+    # scipy's default (5 % of the start value) can be tiny; objectives that are flat at small
+    # scales (e.g. cut points on an output grid) then stop the search at once.
+    default_options = {"max_evaluations": 400, "x_tol": 1e-6, "f_tol": 1e-10, "initial_step": 0.1}
 
     def optimize(self, problem: OptimizationProblem, callback=None) -> OptimizationResult:
         scaled = self.prepare(problem, callback)
+        start = scaled.start_point()
+        simplex = [start]
+        for j in range(len(start)):
+            vertex = start.copy()
+            step = self.options["initial_step"]
+            vertex[j] = start[j] + step if start[j] + step <= 1.0 else start[j] - step
+            simplex.append(vertex)
         solution = minimize(
             _scalar(scaled),
-            scaled.start_point(),
+            start,
             method="Nelder-Mead",
             bounds=[(0.0, 1.0)] * scaled.n_variables,
             options={
@@ -112,6 +122,7 @@ class NelderMead(OptimizerBase):
                 "xatol": self.options["x_tol"],
                 "fatol": self.options["f_tol"],
                 "adaptive": True,
+                "initial_simplex": np.array(simplex),
             },
         )
         return self.result(scaled, solution.x, solution.success, solution.message)

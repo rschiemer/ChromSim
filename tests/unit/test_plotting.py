@@ -106,3 +106,18 @@ def test_yamamoto_and_correlation_plots():
     )
     heatmap = plot_correlation(report).data[0]
     assert list(heatmap.x) == ["a", "b"] and heatmap.z[0][1] == pytest.approx(-0.99)
+
+
+def test_chromatogram_pools_and_pareto_plot():
+    import pandas as pd
+
+    from chromsim.analysis.fractionation import Pool
+    from chromsim.plotting import plot_pareto
+
+    figure = plot_chromatogram(fake_result(), x="min", pools=[Pool("mAb", 30.0, 60.0)])
+    assert len(figure.layout.shapes) >= 2  # step line + pool shading
+    shading = [shape for shape in figure.layout.shapes if shape.type == "rect"]
+    assert shading[0].x0 == pytest.approx(0.5) and shading[0].x1 == pytest.approx(1.0)  # minutes
+    table = pd.DataFrame({"recovery": [0.9, 0.8], "productivity": [1.0, 2.0], "gradient": [30, 10]})
+    pareto = plot_pareto(table, "recovery", "productivity", color="gradient")
+    assert list(pareto.data[0].x) == [0.8, 0.9]  # sorted along x

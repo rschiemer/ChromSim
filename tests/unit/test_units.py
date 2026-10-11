@@ -6,6 +6,7 @@ cannot hide behind the same library computing both sides.
 
 import math
 
+import numpy as np
 import pytest
 
 from chromsim import units
@@ -238,3 +239,9 @@ def test_ph_pseudo_concentration():
     assert units.concentration_from_si(5.5, "pH") == 5.5
     with pytest.raises(UnitError, match="not a length"):
         units.check_dimension(ph, "length")
+
+
+def test_from_si_accepts_arrays():
+    converted = units.from_si(np.array([1e-6, 2e-6]), "mL")
+    assert converted == pytest.approx([1.0, 2.0])
+    assert isinstance(units.from_si(1e-6, "mL"), float)

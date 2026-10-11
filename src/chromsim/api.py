@@ -6,7 +6,17 @@ as a REST API without redesign (SPEC §8.1).
 """
 
 from chromsim.analysis.detectors import predict_conductivity, predict_uv
-from chromsim.analysis.fractionation import AssayComparison, compare_with_assay, fraction_averages
+from chromsim.analysis.fractionation import (
+    AssayComparison,
+    Pool,
+    PoolPerformance,
+    compare_with_assay,
+    default_impurities,
+    fed_amounts,
+    fraction_averages,
+    optimal_pool,
+    pool_performance,
+)
 from chromsim.analysis.peaks import (
     PeakMoments,
     asymmetry_factor,
@@ -15,6 +25,7 @@ from chromsim.analysis.peaks import (
     peak_moments,
     plate_number,
 )
+from chromsim.analysis.process_optimization import ProcessOptimizationResult, optimize_process
 from chromsim.backends import SimulationResult, get_backend
 from chromsim.backends.checks import DiscretisationCheck
 from chromsim.backends.checks import check_discretisation as _check_discretisation
@@ -84,6 +95,7 @@ from chromsim.plotting import (
     plot_correlation,
     plot_fraction_comparison,
     plot_overlay,
+    plot_pareto,
     plot_yamamoto,
 )
 from chromsim.units import Quantity
@@ -192,6 +204,16 @@ __all__ = [
     "read_simulation_result",
     "write_optimization_result",
     "write_simulation_result",
+    # fractionation and process optimization
+    "Pool",
+    "PoolPerformance",
+    "default_impurities",
+    "fed_amounts",
+    "optimal_pool",
+    "pool_performance",
+    "ProcessOptimizationResult",
+    "optimize_process",
+    "plot_pareto",
 ]
 
 

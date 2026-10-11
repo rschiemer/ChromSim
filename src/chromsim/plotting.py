@@ -18,7 +18,7 @@ X_AXES = {
 
 
 def plot_chromatogram(
-    result: SimulationResult, x: str = "CV", protein_unit: str = "g/L"
+    result: SimulationResult, x: str = "CV", protein_unit: str = "g/L", pools=()
 ) -> go.Figure:
     """Outlet concentrations over volume or time, with method steps marked.
 
@@ -33,6 +33,8 @@ def plot_chromatogram(
         Horizontal axis: column volumes (default), millilitres or minutes.
     protein_unit : str, optional
         Concentration unit for components with a molecular weight, default ``"g/L"``.
+    pools : sequence of Pool, optional
+        Product pools to shade (cut points).
 
     Returns
     -------
@@ -79,6 +81,20 @@ def plot_chromatogram(
             xanchor="left",
             yanchor="top",
             font={"size": 10, "color": "gray"},
+        )
+
+    for pool in pools:
+        start, end = np.interp([pool.start_s, pool.end_s], result.time_s, x_values)
+        figure.add_vrect(
+            x0=float(start), x1=float(end), fillcolor="green", opacity=0.12, line_width=0
+        )
+        figure.add_annotation(
+            x=float(0.5 * (start + end)),
+            y=0.95,
+            yref="paper",
+            text=f"pool ({pool.target})",
+            showarrow=False,
+            font={"size": 10, "color": "green"},
         )
 
     figure.update_xaxes(title_text=x_title)
@@ -351,5 +367,42 @@ def plot_correlation(report) -> go.Figure:
     )
     figure.update_layout(
         template="simple_white", title="Parameter correlation", yaxis={"autorange": "reversed"}
+    )
+    return figure
+
+
+def plot_pareto(
+    table, x: str, y: str, color: str | None = None, labels: dict | None = None
+) -> go.Figure:
+    """Scatter of a Pareto front (e.g. recovery vs productivity) from an optimization table.
+
+    Parameters
+    ----------
+    table : pandas.DataFrame
+        One row per point, e.g. ``ProcessOptimizationResult.table``.
+    x, y : str
+        Columns for the axes.
+    color : str, optional
+        Column for the marker colour (e.g. a decision variable).
+    labels : dict, optional
+        Axis titles per column.
+    """
+    labels = labels or {}
+    ordered = table.sort_values(x)
+    marker: dict[str, object] = {"size": 10}
+    if color is not None:
+        marker |= {
+            "color": ordered[color],
+            "colorscale": "Viridis",
+            "showscale": True,
+            "colorbar": {"title": labels.get(color, color)},
+        }
+    figure = go.Figure(
+        go.Scatter(
+            x=ordered[x], y=ordered[y], mode="markers+lines", marker=marker, line={"dash": "dot"}
+        )
+    )
+    figure.update_layout(
+        template="simple_white", xaxis_title=labels.get(x, x), yaxis_title=labels.get(y, y)
     )
     return figure

@@ -38,8 +38,9 @@ Volumetric flow rate from linear (superficial) velocity:
 
 import math
 import re
-from typing import Annotated, Any
+from typing import Annotated, Any, overload
 
+import numpy as np
 import pint
 from pydantic import (
     AfterValidator,
@@ -279,23 +280,32 @@ def to_si(quantity: Quantity, *allowed: str) -> float:
     return float(ureg.Quantity(quantity.magnitude, quantity.unit).to(SI_UNITS[dimension]).magnitude)
 
 
-def from_si(value_si: float, unit: str) -> float:
+@overload
+def from_si(value_si: float, unit: str) -> float: ...
+
+
+@overload
+def from_si(value_si: np.ndarray, unit: str) -> np.ndarray: ...
+
+
+def from_si(value_si, unit: str):
     """Convert an SI value into ``unit``, e.g. ``from_si(8.18e-9, "mL/min") -> 0.491``.
 
     Parameters
     ----------
-    value_si : float
-        Value in the SI unit of the same dimension as ``unit``.
+    value_si : float or numpy.ndarray
+        Value(s) in the SI unit of the same dimension as ``unit``.
     unit : str
         Target unit understood by pint.
 
     Returns
     -------
-    float
-        Value expressed in ``unit``.
+    float or numpy.ndarray
+        Value(s) expressed in ``unit``.
     """
     si_unit = ureg.Quantity(1.0, unit).to_base_units().units
-    return float(ureg.Quantity(value_si, si_unit).to(unit).magnitude)
+    converted = ureg.Quantity(value_si, si_unit).to(unit).magnitude
+    return float(converted) if np.ndim(converted) == 0 else np.asarray(converted, dtype=float)
 
 
 def molar_mass_from_kda(mw_kDa: float) -> float:

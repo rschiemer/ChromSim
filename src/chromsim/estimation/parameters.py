@@ -141,6 +141,12 @@ def get_value(project: Project, path: str, unit: str | None = None) -> float:
                 f"'{path}' is a quantity ({value}); give its unit, e.g. unit=\"{example}\"."
             )
         quantity = Quantity.parse(value)
+        if quantity.unit == unit:  # also covers units pint does not know (CV, pH)
+            return float(quantity.magnitude)
+        if quantity.unit in (units.COLUMN_VOLUME_UNIT, units.PH_UNIT):
+            raise ChromSimError(
+                f"'{path}' is given in {quantity.unit}; ask for it with unit=\"{quantity.unit}\"."
+            )
         return float(units.ureg.Quantity(quantity.magnitude, quantity.unit).to(unit).magnitude)
     return float(value)
 

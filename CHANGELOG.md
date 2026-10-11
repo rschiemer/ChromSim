@@ -7,6 +7,25 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ## [Unreleased]
 
 ### Added
+- Phase 6 process analysis and optimization:
+  - Pools and KPIs (`Pool`, `pool_performance`): recovery, purity (by mass when molecular
+    weights are known), productivity per packed-bed volume, specific buffer consumption, pool
+    concentration; `fed_amounts`, `default_impurities`.
+  - `optimal_pool`: exact maximum-recovery cut points at a required purity, optionally restricted
+    to method steps (`pool_steps`).
+  - `optimize_process`: method variables by project path, nested exact cut points, one or
+    several objectives (Pareto front via NSGA-II), purity constraint, parallel option.
+  - `plot_chromatogram(..., pools=...)`, `plot_pareto`.
+  - Parity test against CADET-Process's Fractionator (~3e-7 relative); unit, workflow and
+    plotting tests.
+  - Tutorial 04 (`examples/04_optimize_process.py`): 77 % → 94 % recovery at 99 % purity, and the
+    recovery–productivity Pareto front.
+- Docs: "Fractionation and process optimization", ADR 0010 (fractionation; SPEC §7.4 note).
+
+### Changed
+- Nelder–Mead starts from a simplex of 10 % of each scaled range (`initial_step`), so objectives
+  that are flat at small scales don't stop it at once.
+- `units.from_si` accepts arrays; `get_value` reads quantities in CV and pH.
 - Phase 5 plugins:
   - CADET-native isotherms GIEX (salt + pH), MPM Langmuir, HIC constant water activity, HIC
     water on hydrophobic surfaces, Bi-Langmuir; pH pseudo-concentration unit `pH`;
