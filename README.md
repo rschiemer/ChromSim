@@ -15,8 +15,9 @@ local web UI.
 pixi install              # Python, CADET-Core, CADET-Process and all dependencies
 pixi run chromsim doctor  # check the installation
 pixi run test             # run the fast tests
+pixi run ui               # optional web UI in the browser
 ```
 
 No pixi? Use `conda env create -f environment.yml` (installs ChromSim in editable mode).
 
-Status: Phase 0 (scaffold). See SPEC §11 for the roadmap.
+Status: Phase 7 (web UI) done. Tutorials are in `examples/`; see SPEC §11 for the roadmap.

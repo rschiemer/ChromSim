@@ -21,6 +21,7 @@ import io
 import logging
 import re
 from pathlib import Path
+from types import MappingProxyType
 
 import numpy as np
 
@@ -32,7 +33,7 @@ from chromsim.errors import ChromSimError
 
 logger = logging.getLogger(__name__)
 
-AXIS_UNITS = {"ml": "volume", "min": "time"}
+AXIS_UNITS = MappingProxyType({"ml": "volume", "min": "time"})
 _CHROMATOGRAM_PREFIX = re.compile(r"^Chrom\.\d+_")
 
 

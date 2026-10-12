@@ -88,7 +88,7 @@ class Fraction:
 
 
 # Labels of fraction-collector marks that are not fractions.
-NON_FRACTION_LABELS = {"waste", "frac"}
+NON_FRACTION_LABELS = frozenset({"waste", "frac"})
 
 
 def fractions_from_marks(marks: list[tuple[float, str]], end_m3: float) -> list[Fraction]:

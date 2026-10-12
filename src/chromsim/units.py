@@ -38,7 +38,9 @@ Volumetric flow rate from linear (superficial) velocity:
 
 import math
 import re
-from typing import Annotated, Any, overload
+from dataclasses import dataclass
+from types import MappingProxyType
+from typing import Annotated, Any, get_args, overload
 
 import numpy as np
 import pint
@@ -63,40 +65,44 @@ COLUMN_VOLUME_UNIT = "CV"
 PH_UNIT = "pH"
 
 # Dimension name -> SI unit. The SI unit also defines the dimension (e.g. m**3/s = volume/time).
-SI_UNITS = {
-    "length": "m",
-    "volume": "m**3",
-    "time": "s",
-    "velocity": "m/s",
-    "volumetric_flow": "m**3/s",
-    "molar_concentration": "mol/m**3",
-    "mass_concentration": "kg/m**3",
-    "diffusivity": "m**2/s",
-    "rate": "1/s",
-    "specific_absorptivity": "m**2/kg",
-    "conductivity": "S/m",
-    "pressure": "Pa",
-    "dimensionless": "dimensionless",
-}
+SI_UNITS = MappingProxyType(
+    {
+        "length": "m",
+        "volume": "m**3",
+        "time": "s",
+        "velocity": "m/s",
+        "volumetric_flow": "m**3/s",
+        "molar_concentration": "mol/m**3",
+        "mass_concentration": "kg/m**3",
+        "diffusivity": "m**2/s",
+        "rate": "1/s",
+        "specific_absorptivity": "m**2/kg",
+        "conductivity": "S/m",
+        "pressure": "Pa",
+        "dimensionless": "dimensionless",
+    }
+)
 
 # Dimension name -> units suggested in error messages.
-EXAMPLE_UNITS = {
-    "length": "cm or mm",
-    "volume": "mL",
-    "time": "min or s",
-    "velocity": "cm/h",
-    "volumetric_flow": "mL/min",
-    "molar_concentration": "mM",
-    "mass_concentration": "g/L",
-    "diffusivity": "m^2/s",
-    "rate": "1/s",
-    "specific_absorptivity": "L/(g*cm)",
-    "conductivity": "mS/cm",
-    "pressure": "MPa or bar",
-    "dimensionless": "dimensionless",
-    "column_volumes": "CV",
-    "ph": "pH",
-}
+EXAMPLE_UNITS = MappingProxyType(
+    {
+        "length": "cm or mm",
+        "volume": "mL",
+        "time": "min or s",
+        "velocity": "cm/h",
+        "volumetric_flow": "mL/min",
+        "molar_concentration": "mM",
+        "mass_concentration": "g/L",
+        "diffusivity": "m^2/s",
+        "rate": "1/s",
+        "specific_absorptivity": "L/(g*cm)",
+        "conductivity": "mS/cm",
+        "pressure": "MPa or bar",
+        "dimensionless": "dimensionless",
+        "column_volumes": "CV",
+        "ph": "pH",
+    }
+)
 
 _NUMBER_THEN_UNIT = re.compile(r"^\s*([-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?)\s*(.*?)\s*$")
 
@@ -580,24 +586,80 @@ def _require(*allowed: str, what: str | None = None, allow_zero: bool = True):
     return validate
 
 
-Length = Annotated[Quantity, AfterValidator(_require("length", allow_zero=False))]
-Volume = Annotated[Quantity, AfterValidator(_require("volume"))]
-Duration = Annotated[
-    Quantity,
-    AfterValidator(_require("time", "volume", "column_volumes", what="duration", allow_zero=False)),
-]
-FlowRate = Annotated[
-    Quantity, AfterValidator(_require("velocity", "volumetric_flow", what="flow rate"))
-]
-Concentration = Annotated[
-    Quantity,
-    AfterValidator(
-        _require("molar_concentration", "mass_concentration", "ph", what="concentration")
-    ),
-]
-MolarConcentration = Annotated[Quantity, AfterValidator(_require("molar_concentration"))]
-Diffusivity = Annotated[Quantity, AfterValidator(_require("diffusivity"))]
+@dataclass(frozen=True)
+class Dimensions:
+    """Marker in a quantity type's metadata: the dimensions it accepts (for forms and docs)."""
+
+    names: tuple[str, ...]
+
+
+def _quantity_type(*allowed: str, what: str | None = None, allow_zero: bool = True):
+    """An annotated Quantity type that validates dimension and sign and records its dimensions."""
+    return Annotated[
+        Quantity,
+        AfterValidator(_require(*allowed, what=what, allow_zero=allow_zero)),
+        Dimensions(allowed),
+    ]
+
+
+Length = _quantity_type("length", allow_zero=False)
+Volume = _quantity_type("volume")
+Duration = _quantity_type("time", "volume", "column_volumes", what="duration", allow_zero=False)
+FlowRate = _quantity_type("velocity", "volumetric_flow", what="flow rate")
+Concentration = _quantity_type(
+    "molar_concentration", "mass_concentration", "ph", what="concentration"
+)
+MolarConcentration = _quantity_type("molar_concentration")
+Diffusivity = _quantity_type("diffusivity")
 # Film mass-transfer coefficient k_f has the dimension of a velocity (m/s).
-FilmTransferCoefficient = Annotated[
-    Quantity, AfterValidator(_require("velocity", what="film transfer coefficient"))
-]
+FilmTransferCoefficient = _quantity_type("velocity", what="film transfer coefficient")
+
+# Units offered in forms for each dimension (first = default). Any pint unit can still be typed.
+UNIT_CHOICES = MappingProxyType(
+    {
+        "length": ("cm", "mm", "m", "um"),
+        "volume": ("mL", "L", "uL"),
+        "time": ("min", "s", "h"),
+        "column_volumes": ("CV",),
+        "velocity": ("cm/h", "m/s", "cm/s"),
+        "volumetric_flow": ("mL/min", "L/h"),
+        "molar_concentration": ("mM", "M", "mol/m^3"),
+        "mass_concentration": ("g/L", "mg/mL"),
+        "ph": ("pH",),
+        "diffusivity": ("m^2/s", "cm^2/s"),
+        "conductivity": ("mS/cm", "S/m"),
+        "rate": ("1/s", "1/min"),
+    }
+)
+
+
+def unit_choices(dimensions: tuple[str, ...]) -> list[str]:
+    """Units to offer for a quantity accepting ``dimensions``, in a sensible order."""
+    return [unit for dimension in dimensions for unit in UNIT_CHOICES.get(dimension, ())]
+
+
+def quantity_dimensions(annotation) -> tuple[str, ...] | None:
+    """Dimensions of an annotated quantity type, also inside ``X | None`` and ``dict[str, X]``.
+
+    Returns ``None`` if the annotation is not a quantity type.
+    """
+    for metadata in getattr(annotation, "__metadata__", ()):
+        if isinstance(metadata, Dimensions):
+            return metadata.names
+    for argument in get_args(annotation):
+        found = quantity_dimensions(argument)
+        if found is not None:
+            return found
+    return None
+
+
+def field_dimensions(field_info) -> tuple[str, ...] | None:
+    """Dimensions of a pydantic model field holding quantities (directly, optional or in a dict).
+
+    pydantic moves the metadata of a directly annotated field onto ``field_info.metadata``, so
+    look there first.
+    """
+    for metadata in getattr(field_info, "metadata", ()):
+        if isinstance(metadata, Dimensions):
+            return metadata.names
+    return quantity_dimensions(field_info.annotation)

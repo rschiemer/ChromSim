@@ -77,3 +77,16 @@ def test_run_doctor_reports_missing_cadet_core(monkeypatch):
     assert report.smoke_test is None
     assert report.versions["CADET-Core"] == "not found"
     assert "Python" in report.versions  # versions are still reported
+
+
+def test_ui_without_nicegui_explains_how_to_install(monkeypatch, capsys):
+    monkeypatch.setattr(api, "ui_available", lambda: False)
+    assert cli.main(["ui", "--no-browser"]) == 1
+    assert "pip install 'chromsim[ui]'" in capsys.readouterr().out
+
+
+def test_ui_passes_options_to_run_ui(monkeypatch):
+    calls = []
+    monkeypatch.setattr(api, "run_ui", lambda *args, **kwargs: calls.append((args, kwargs)))
+    assert cli.main(["ui", "--workspace", "ws", "--port", "9000", "--no-browser"]) == 0
+    assert calls == [(("ws",), {"port": 9000, "native": False, "show": False, "host": "127.0.0.1"})]

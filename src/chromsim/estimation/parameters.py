@@ -171,3 +171,67 @@ def set_values(project: Project, assignments: list[tuple[str, float, str | None]
         else:
             container[key] = float(value)
     return Project.model_validate(data)
+
+
+def fit_parameter_candidates(project: Project) -> list[FitParameter]:
+    """Parameters of a project that are commonly fitted, with sensible default bounds.
+
+    Isotherm parameters of every binding component (bounds from the isotherm where finite, else
+    a factor of 100 around the current value on a log scale), axial dispersion, film and pore
+    diffusion, and the porosities. Adjust the bounds before fitting.
+    """
+    from chromsim.isotherms.registry import get_isotherm
+
+    candidates = []
+    isotherm = get_isotherm(project.isotherm.model)
+    for component, values in project.isotherm.parameters.items():
+        for name, value in values.items():
+            description = isotherm.parameters[name]
+            scale: Literal["lin", "log"]
+            lower, upper = description.bounds
+            if description.log_scale and value > 0:
+                lower, upper, scale = value / 100.0, value * 100.0, "log"
+            else:
+                lower = lower if lower is not None else value - abs(value) - 1.0
+                upper = upper if upper is not None else value + abs(value) + 1.0
+                scale = "lin"
+            candidates.append(
+                FitParameter(
+                    path=f"isotherm.parameters.{component}.{name}",
+                    lower=lower,
+                    upper=upper,
+                    scale=scale,
+                    name=f"{component} {name}",
+                )
+            )
+    column = project.column
+    if column.axial_dispersion is not None:
+        value = get_value(project, "column.axial_dispersion", "m^2/s")
+        candidates.append(
+            FitParameter(
+                path="column.axial_dispersion",
+                lower=value / 100,
+                upper=value * 100,
+                scale="log",
+                unit="m^2/s",
+                name="axial dispersion",
+            )
+        )
+    for field, unit in (("film_diffusion", "m/s"), ("pore_diffusion", "m^2/s")):
+        for component in getattr(column, field) or {}:
+            value = get_value(project, f"column.{field}.{component}", unit)
+            candidates.append(
+                FitParameter(
+                    path=f"column.{field}.{component}",
+                    lower=value / 100,
+                    upper=value * 100,
+                    scale="log",
+                    unit=unit,
+                    name=f"{component} {field.replace('_', ' ')}",
+                )
+            )
+    candidates += [
+        FitParameter(path="resin.col_porosity", lower=0.2, upper=0.6, name="column porosity"),
+        FitParameter(path="resin.par_porosity", lower=0.3, upper=0.95, name="particle porosity"),
+    ]
+    return candidates

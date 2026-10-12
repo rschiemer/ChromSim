@@ -19,6 +19,7 @@ so constraint-handling optimizers steer back.
 
 import logging
 from dataclasses import dataclass, field
+from types import MappingProxyType
 
 import numpy as np
 import pandas as pd
@@ -47,19 +48,23 @@ from chromsim.optimizers import (
 logger = logging.getLogger(__name__)
 
 # Objective name → (PoolPerformance attribute, sign); optimizers minimise sign × value.
-OBJECTIVES = {
-    "recovery": ("recovery", -1.0),
-    "productivity": ("productivity_mol_per_m3_s", -1.0),
-    "buffer_consumption": ("buffer_consumption_m3_per_mol", 1.0),
-    "concentration": ("concentration_mol_per_m3", -1.0),
-}
+OBJECTIVES = MappingProxyType(
+    {
+        "recovery": ("recovery", -1.0),
+        "productivity": ("productivity_mol_per_m3_s", -1.0),
+        "buffer_consumption": ("buffer_consumption_m3_per_mol", 1.0),
+        "concentration": ("concentration_mol_per_m3", -1.0),
+    }
+)
 # Objective values for candidates without any pool reaching the purity (worst possible).
-INFEASIBLE = {
-    "recovery": 0.0,
-    "productivity": 0.0,
-    "buffer_consumption": 1e30,
-    "concentration": 0.0,
-}
+INFEASIBLE = MappingProxyType(
+    {
+        "recovery": 0.0,
+        "productivity": 0.0,
+        "buffer_consumption": 1e30,
+        "concentration": 0.0,
+    }
+)
 
 
 @dataclass
@@ -268,3 +273,39 @@ def optimize_process(
     if best.pool is None:
         logger.warning("No settings found that reach purity %.3g for '%s'.", purity, target)
     return ProcessOptimizationResult(optimization=outcome, best=best, table=pd.DataFrame(rows))
+
+
+def process_variable_candidates(project: Project) -> list[FitParameter]:
+    """Method settings that are commonly optimised, with default bounds (half to double now).
+
+    Every step duration (in its own unit) and, for gradient steps, the end concentration of each
+    modifier (salt, pH) that changes.
+    """
+    from chromsim.units import Quantity
+
+    candidates = []
+    for index, step in enumerate(project.method):
+        duration = Quantity.parse(step.duration)
+        candidates.append(
+            FitParameter(
+                path=f"method.{index}.duration",
+                lower=duration.magnitude / 2,
+                upper=duration.magnitude * 2,
+                unit=duration.unit,
+                name=f"{step.name} duration ({duration.unit})",
+            )
+        )
+        for component, end in (step.inlet_end or {}).items():
+            quantity = Quantity.parse(end)
+            if quantity.magnitude <= 0:
+                continue
+            candidates.append(
+                FitParameter(
+                    path=f"method.{index}.inlet_end.{component}",
+                    lower=quantity.magnitude / 2,
+                    upper=quantity.magnitude * 2,
+                    unit=quantity.unit,
+                    name=f"{step.name} end {component} ({quantity.unit})",
+                )
+            )
+    return candidates

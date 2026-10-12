@@ -195,3 +195,46 @@ def yamamoto_fit(
         r_squared=float(r_squared),
         table=table,
     )
+
+
+def lge_run_from_file(
+    path, project, gradient_cv: float, calibration, gradient_step: int | None = None
+) -> LgeRun:
+    """An LGE run from a chromatogram file of ``project``'s method with a given gradient length.
+
+    Parameters
+    ----------
+    path : str or Path
+        Chromatogram with UV and conductivity.
+    project : Project
+        Column, method, detector delay volumes (the gradient step's length is replaced).
+    gradient_cv : float
+        Length of the gradient in this run, CV.
+    calibration : ConductivityCalibration
+        Salt ↔ conductivity.
+    gradient_step : int, optional
+        Index of the gradient step; default the first step with ``inlet_end``.
+    """
+    from chromsim.data.importers import read_chromatogram
+    from chromsim.data.preprocessing import conductivity_to_salt, subtract_baseline
+
+    if gradient_step is None:
+        gradient_step = next((i for i, step in enumerate(project.method) if step.inlet_end), None)
+        if gradient_step is None:
+            raise ChromSimError("The project's method has no gradient step (no inlet_end).")
+    method = project.model_copy(deep=True)
+    method.method[gradient_step].duration = f"{gradient_cv} CV"
+    slope = gradient_slope(method.resolved_method()[gradient_step])
+
+    experiment = read_chromatogram(path)
+    uv = experiment.signal("uv")
+    start = float(uv.x.min())
+    first_step_end = (
+        method.resolved_method()[0].end_s * method.resolved_method()[0].flow_rate_m3_per_s
+    )
+    uv = subtract_baseline(uv, (start, max(start + 1e-9, first_step_end)))
+    salt = conductivity_to_salt(experiment.signal("conductivity"), calibration)
+    elution_salt = elution_salt_at_peak(
+        uv, salt, project.system.uv_delay_volume_m3, project.system.conductivity_delay_volume_m3
+    )
+    return LgeRun(f"{experiment.name} ({gradient_cv:g} CV)", slope, elution_salt)

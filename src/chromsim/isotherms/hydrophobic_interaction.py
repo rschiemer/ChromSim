@@ -15,41 +15,38 @@ from chromsim.isotherms.cadet_native import (
 )
 from chromsim.isotherms.registry import register_isotherm
 
-HIC_PARAMETERS = {
-    "k_eq": Parameter(
-        unit="dimensionless", description="equilibrium constant k_a/k_d", log_scale=True
-    ),
-    "q_max": Parameter(unit="mol/m^3", description="saturation capacity (per solid volume)"),
-    "nu": Parameter(
-        unit="dimensionless",
-        description="ligands per protein–ligand interaction ν",
-        bounds=(0, 100),
-    ),
-    "k_kin": K_KIN,
-    "beta_0": Parameter(
-        unit="dimensionless",
-        description="ordered water molecules at infinite dilution β₀",
-        per_component=False,
-    ),
-    "beta_1": Parameter(
-        unit="m^3/mol", description="salt dependence of ordered water β₁", per_component=False
-    ),
-}
-HIC_EXAMPLE = {
-    "components": [{"name": "salt"}, {"name": "A"}],
-    "parameters": {"A": {"k_eq": 1.0, "q_max": 10.0, "nu": 2.0, "k_kin": 1.0}},
-    "global_parameters": {"beta_0": 0.1, "beta_1": 1e-3},
-    # HIC binds at high salt and elutes at low salt.
-    "load": {"salt": "1000 mM", "A": "0.1 mM"},
-    "elute": {"salt": "0 mM"},
-}
-
 
 class _HICBase(CadetNativeIsotherm):
     requires_salt = True
     n_modifiers = 1
-    parameters = HIC_PARAMETERS
-    example = HIC_EXAMPLE
+    parameters = {
+        "k_eq": Parameter(
+            unit="dimensionless", description="equilibrium constant k_a/k_d", log_scale=True
+        ),
+        "q_max": Parameter(unit="mol/m^3", description="saturation capacity (per solid volume)"),
+        "nu": Parameter(
+            unit="dimensionless",
+            description="ligands per protein–ligand interaction ν",
+            bounds=(0, 100),
+        ),
+        "k_kin": K_KIN,
+        "beta_0": Parameter(
+            unit="dimensionless",
+            description="ordered water molecules at infinite dilution β₀",
+            per_component=False,
+        ),
+        "beta_1": Parameter(
+            unit="m^3/mol", description="salt dependence of ordered water β₁", per_component=False
+        ),
+    }
+    example = {
+        "components": [{"name": "salt"}, {"name": "A"}],
+        "parameters": {"A": {"k_eq": 1.0, "q_max": 10.0, "nu": 2.0, "k_kin": 1.0}},
+        "global_parameters": {"beta_0": 0.1, "beta_1": 1e-3},
+        # HIC binds at high salt and elutes at low salt.
+        "load": {"salt": "1000 mM", "A": "0.1 mM"},
+        "elute": {"salt": "0 mM"},
+    }
 
     def bound_states(self, component_names, parameters):
         """Salt has no bound state; other components bind if they have parameters."""

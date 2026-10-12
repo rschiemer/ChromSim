@@ -40,6 +40,7 @@ nav:
       - Experimental data: user_guide/experimental_data.md
       - Calibrating a model: user_guide/calibration.md
       - Fractionation and process optimization: user_guide/process_optimization.md
+      - Web UI, workspaces and jobs: user_guide/web_ui.md
   - How-to:
       - Add an isotherm: how_to/add_isotherm.md
       - Add an optimizer: how_to/add_optimizer.md
@@ -62,6 +63,7 @@ nav:
       - decisions/index.md
       - 0001 CADET-Process as process layer: decisions/0001-use-cadet-process.md
       - 0002 pixi environment: decisions/0002-pixi.md
+      - 0003 UI framework (NiceGUI): decisions/0003-ui-framework.md
       - 0004 Units policy: decisions/0004-units-policy.md
       - 0005 CADET backend conventions: decisions/0005-cadet-backend-conventions.md
       - 0006 openpyxl: decisions/0006-openpyxl.md

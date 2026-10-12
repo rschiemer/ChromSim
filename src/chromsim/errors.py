@@ -40,3 +40,7 @@ class SimulationSetupError(ChromSimError):
 
 class SimulationError(ChromSimError):
     """The simulator ran but failed (solver error, non-zero exit flag)."""
+
+
+class JobError(ChromSimError):
+    """A background job has no result: it is still running, failed or was cancelled."""

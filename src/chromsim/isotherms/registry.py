@@ -47,3 +47,21 @@ def get_isotherm(name: str) -> IsothermBase:
 def list_isotherms() -> list[str]:
     """Names of all registered isotherms, sorted."""
     return sorted(_ISOTHERMS)
+
+
+def isotherm_parameter_table(name: str) -> list[dict]:
+    """Parameters of an isotherm for forms and docs: name, unit, description, bounds, flags."""
+    isotherm = get_isotherm(name)
+    return [
+        {
+            "name": parameter_name,
+            "unit": parameter.unit,
+            "description": parameter.description,
+            "lower": parameter.bounds[0],
+            "upper": parameter.bounds[1],
+            "log_scale": parameter.log_scale,
+            "required": parameter.required,
+            "per_component": parameter.per_component,
+        }
+        for parameter_name, parameter in isotherm.parameters.items()
+    ]

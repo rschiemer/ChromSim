@@ -7,6 +7,28 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ## [Unreleased]
 
 ### Added
+- Phase 7 web UI and server-ready plumbing (SPEC §8, §8.1):
+  - `FileStorage` workspace folder: projects (YAML), write-once read-only data files, results
+    and optimization histories (HDF5), JSON records; `created_by`/`created_at` on everything.
+  - `LocalProcessRunner` (`JobRunner` protocol: `submit`, `status`, `cancel`, `result`,
+    `list_jobs`): jobs in worker processes, status and cancel requests stored in the workspace
+    so they survive a browser refresh; `JobCancelled`, `JobError`.
+  - `Workspace`: per-session object with `submit_simulation`, `submit_fit(FitSetup)`,
+    `submit_process_optimization(ProcessSetup)`, `job`, `result`, `cancel`, `jobs`.
+  - `codegen`: complete Python scripts for what each page does ("Show Python code").
+  - NiceGUI pages Project, Data, Simulate, Calibrate (tracer, Yamamoto, inverse fit), Optimize,
+    Results; forms generated from the pydantic models with unit selectors; `chromsim ui`
+    (`--workspace`, `--port`, `--native`, `--no-browser`) and `pixi run ui`; a clear message
+    if NiceGUI is not installed.
+  - Helpers used by the UI and usable from Python: `project_from_dict`, `unit_choices`,
+    `field_dimensions`, `isotherm_parameter_table`, `fit_parameter_candidates`,
+    `process_variable_candidates`, `tracer_run_from_file`, `tracer_summary`,
+    `lge_run_from_file`, `plot_correlation_matrix`.
+  - Tests: page smoke tests and a U1–U6 walkthrough in the UI (NiceGUI simulated user), page ↔
+    tutorial parity, no module-level mutable state, storage/jobs, codegen, helpers.
+  - Tutorial 05 (`examples/05_results_and_workspace.py`): workspaces, background jobs, stored
+    results.
+- Docs: "Web UI, workspaces and jobs", ADR 0003 (NiceGUI).
 - Phase 6 process analysis and optimization:
   - Pools and KPIs (`Pool`, `pool_performance`): recovery, purity (by mass when molecular
     weights are known), productivity per packed-bed volume, specific buffer consumption, pool
@@ -23,6 +45,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Docs: "Fractionation and process optimization", ADR 0010 (fractionation; SPEC §7.4 note).
 
 ### Changed
+- Module-level constant tables are read-only (`MappingProxyType`, `frozenset`, tuples); the HIC
+  parameter tables moved into the isotherm class.
 - Nelder–Mead starts from a simplex of 10 % of each scaled range (`initial_step`), so objectives
   that are flat at small scales don't stop it at once.
 - `units.from_si` accepts arrays; `get_value` reads quantities in CV and pH.

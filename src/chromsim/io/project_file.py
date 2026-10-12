@@ -120,6 +120,21 @@ def project_from_yaml(text: str, source: str = "project text") -> Project:
         raise ProjectFileError(_format_validation_error(error, source)) from None
 
 
+def project_from_dict(data: dict, source: str = "project form") -> Project:
+    """Validate project data (e.g. from a form) with the same readable errors as project files.
+
+    Raises
+    ------
+    ProjectFileError
+        Listing every problem with its location, e.g. ``column.length: '20 mL' is not a length``.
+    """
+    data = migrate(data, source)
+    try:
+        return Project.model_validate(data)
+    except ValidationError as error:
+        raise ProjectFileError(_format_validation_error(error, source)) from None
+
+
 def project_to_yaml(project: Project) -> str:
     """Write a Project as YAML text.
 

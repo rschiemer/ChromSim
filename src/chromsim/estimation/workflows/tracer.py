@@ -317,3 +317,61 @@ def analyse_tracers(
                 )
             )
     return analysis
+
+
+def tracer_run_from_file(
+    path, kind: TracerKind, injection_volume_ml: float = 0.1, name: str | None = None
+) -> TracerRun:
+    """A tracer run from a chromatogram file, with automatic UV baseline and injection mark.
+
+    The baseline is a straight line through the mean signal before the injection and over the
+    last 10 % of the run (both protein-free for a single pulse). The injection starts at the
+    file's first injection mark (0 if there is none).
+
+    Parameters
+    ----------
+    path : str or Path
+        Chromatogram file (any importer).
+    kind : {"system", "non_penetrating", "pore_penetrating"}
+    injection_volume_ml : float
+        Injected volume, mL.
+    name : str, optional
+        Label; default the file name.
+    """
+    from chromsim.data.importers import read_chromatogram
+    from chromsim.data.preprocessing import subtract_baseline
+
+    experiment = read_chromatogram(path)
+    uv = experiment.signal("uv")
+    injection = experiment.injections_m3[0] if experiment.injections_m3 else 0.0
+    end = float(uv.x.max())
+    windows = [(end - 0.1 * (end - injection), end)]
+    if injection > uv.x.min() + 1e-12:
+        windows.insert(0, (float(uv.x.min()), injection))
+    corrected = subtract_baseline(uv, *windows)
+    volume = units.to_si(Quantity(magnitude=injection_volume_ml, unit="mL"), "volume")
+    return TracerRun(name or experiment.name, kind, corrected, injection, volume)
+
+
+def tracer_summary(analysis: TracerAnalysis) -> list[dict]:
+    """Results of a tracer analysis in lab units, one row per quantity (for tables and reports)."""
+    rows = []
+
+    def add(label, value, unit, convert=None):
+        if value is not None:
+            rows.append(
+                {"quantity": label, "value": convert(value) if convert else value, "unit": unit}
+            )
+
+    def ml(value):
+        return units.from_si(value, "mL")
+
+    add("system volume (to detector)", analysis.system_volume_m3, "mL", ml)
+    add("mixer volume", analysis.mixer_volume_m3, "mL", ml)
+    add("tubing volume", analysis.tubing_volume_m3, "mL", ml)
+    add("column porosity ε_c", analysis.col_porosity, "-")
+    add("total porosity ε_t", analysis.total_porosity, "-")
+    add("particle porosity ε_p", analysis.par_porosity, "-")
+    add("axial dispersion D_ax", analysis.axial_dispersion_m2_per_s, "m²/s")
+    add("Péclet number", analysis.peclet, "-")
+    return rows

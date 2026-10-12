@@ -5,6 +5,7 @@ return serialisable objects (dataclasses, pydantic models, file paths) so they c
 as a REST API without redesign (SPEC §8.1).
 """
 
+from chromsim import codegen
 from chromsim.analysis.detectors import predict_conductivity, predict_uv
 from chromsim.analysis.fractionation import (
     AssayComparison,
@@ -25,7 +26,11 @@ from chromsim.analysis.peaks import (
     peak_moments,
     plate_number,
 )
-from chromsim.analysis.process_optimization import ProcessOptimizationResult, optimize_process
+from chromsim.analysis.process_optimization import (
+    ProcessOptimizationResult,
+    optimize_process,
+    process_variable_candidates,
+)
 from chromsim.backends import SimulationResult, get_backend
 from chromsim.backends.checks import DiscretisationCheck
 from chromsim.backends.checks import check_discretisation as _check_discretisation
@@ -57,31 +62,61 @@ from chromsim.errors import (
     ChromSimError,
     EnvironmentCheckError,
     IsothermConfigError,
+    JobError,
     ProjectFileError,
     SimulationError,
     SimulationSetupError,
     UnitError,
 )
 from chromsim.estimation.objectives import AssayTarget, FitExperiment, SignalTarget
-from chromsim.estimation.parameters import FitParameter, get_value, set_values
+from chromsim.estimation.parameters import (
+    FitParameter,
+    fit_parameter_candidates,
+    get_value,
+    set_values,
+)
 from chromsim.estimation.uncertainty import UncertaintyReport, parameter_uncertainty
 from chromsim.estimation.workflows.inverse_fit import FitResult, inverse_fit
-from chromsim.estimation.workflows.tracer import TracerAnalysis, TracerRun, analyse_tracers
+from chromsim.estimation.workflows.tracer import (
+    TracerAnalysis,
+    TracerRun,
+    analyse_tracers,
+    tracer_run_from_file,
+    tracer_summary,
+)
 from chromsim.estimation.workflows.yamamoto import (
     LgeRun,
     YamamotoResult,
     elution_salt_at_peak,
     gradient_slope,
+    lge_run_from_file,
     yamamoto_fit,
 )
-from chromsim.io.project_file import load_project, project_from_yaml, project_to_yaml, save_project
+from chromsim.io.project_file import (
+    load_project,
+    project_from_dict,
+    project_from_yaml,
+    project_to_yaml,
+    save_project,
+)
 from chromsim.io.results import (
     read_optimization_result,
     read_simulation_result,
     write_optimization_result,
     write_simulation_result,
 )
-from chromsim.isotherms.registry import list_isotherms
+from chromsim.isotherms.registry import isotherm_parameter_table, list_isotherms
+from chromsim.jobs import (
+    AssayInput,
+    FitSetup,
+    JobCancelled,
+    JobStatus,
+    LocalProcessRunner,
+    ProcessSetup,
+    run_fit,
+    run_process_optimization,
+    run_simulation,
+)
 from chromsim.optimizers import (
     Constraint,
     OptimizationProblem,
@@ -93,12 +128,15 @@ from chromsim.optimizers import (
 from chromsim.plotting import (
     plot_chromatogram,
     plot_correlation,
+    plot_correlation_matrix,
     plot_fraction_comparison,
     plot_overlay,
     plot_pareto,
     plot_yamamoto,
 )
-from chromsim.units import Quantity
+from chromsim.storage import FileStorage
+from chromsim.units import Quantity, field_dimensions, unit_choices
+from chromsim.workspace import Workspace
 
 __all__ = [
     # errors
@@ -127,6 +165,7 @@ __all__ = [
     "System",
     # project files
     "load_project",
+    "project_from_dict",
     "project_from_yaml",
     "project_to_yaml",
     "save_project",
@@ -191,6 +230,7 @@ __all__ = [
     "UncertaintyReport",
     "parameter_uncertainty",
     "plot_correlation",
+    "plot_correlation_matrix",
     # optimization
     "Constraint",
     "OptimizationProblem",
@@ -214,6 +254,31 @@ __all__ = [
     "ProcessOptimizationResult",
     "optimize_process",
     "plot_pareto",
+    # workspaces, jobs and the UI
+    "AssayInput",
+    "FileStorage",
+    "FitSetup",
+    "JobCancelled",
+    "JobError",
+    "JobStatus",
+    "LocalProcessRunner",
+    "ProcessSetup",
+    "UIUnavailableError",
+    "Workspace",
+    "codegen",
+    "field_dimensions",
+    "isotherm_parameter_table",
+    "run_fit",
+    "run_process_optimization",
+    "run_simulation",
+    "run_ui",
+    "ui_available",
+    "unit_choices",
+    "fit_parameter_candidates",
+    "lge_run_from_file",
+    "process_variable_candidates",
+    "tracer_run_from_file",
+    "tracer_summary",
 ]
 
 
@@ -302,3 +367,43 @@ def optimize(
         optimizers).
     """
     return get_optimizer(optimizer, **options).optimize(problem, callback=callback)
+
+
+class UIUnavailableError(ChromSimError):
+    """The optional web UI is not installed."""
+
+
+def ui_available() -> bool:
+    """``True`` if the optional web UI (NiceGUI) is installed."""
+    import importlib.util
+
+    return importlib.util.find_spec("nicegui") is not None
+
+
+def run_ui(
+    workspace_dir="chromsim-workspace",
+    port: int = 8080,
+    native: bool = False,
+    show: bool = True,
+    host: str = "127.0.0.1",
+) -> None:
+    """Start the local web UI (SPEC §8) on a workspace folder.
+
+    The UI has no login (v1), so by default it only accepts connections from this computer
+    (``host="127.0.0.1"``). ``host="0.0.0.0"`` makes it reachable from the network: everyone who
+    can reach the port can read and change the workspace.
+
+    Raises
+    ------
+    UIUnavailableError
+        If NiceGUI is not installed; the message says how to install it.
+    """
+    if not ui_available():
+        raise UIUnavailableError(
+            "The web UI is optional and not installed. Install it with `pip install "
+            "'chromsim[ui]'`, or use the pixi default environment (`pixi run ui`). Everything "
+            "the UI does is also available from Python (chromsim.api)."
+        )
+    from chromsim.ui.app import run  # imported only here: chromsim itself never imports NiceGUI
+
+    run(workspace_dir=workspace_dir, port=port, native=native, show=show, host=host)

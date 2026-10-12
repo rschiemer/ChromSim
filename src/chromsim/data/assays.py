@@ -36,7 +36,7 @@ from chromsim.units import Quantity
 
 logger = logging.getLogger(__name__)
 
-BELOW_LOQ_TEXTS = {"<loq", "blq", "n.d.", "nd", "<lod", "below loq"}
+BELOW_LOQ_TEXTS = frozenset({"<loq", "blq", "n.d.", "nd", "<lod", "below loq"})
 
 
 class AnalyteColumn(BaseModel):

@@ -1,7 +1,7 @@
 """Command-line interface: ``chromsim <command>``.
 
-Like the UI, the CLI only calls functions from :mod:`chromsim.api` (SPEC §4). Phase 0 provides
-``chromsim doctor``; ``simulate``, ``fit``, ``optimize`` and ``ui`` follow in later phases.
+Like the UI, the CLI only calls functions from :mod:`chromsim.api` (SPEC §4). Commands:
+``chromsim doctor`` (environment check) and ``chromsim ui`` (local web UI).
 """
 
 import argparse
@@ -55,6 +55,16 @@ def _build_parser() -> argparse.ArgumentParser:
     subcommands.add_parser(
         "doctor", help="print package versions and run a short CADET test simulation"
     )
+    ui_parser = subcommands.add_parser("ui", help="start the local web UI (optional extra)")
+    ui_parser.add_argument("--workspace", default="chromsim-workspace", help="workspace folder")
+    ui_parser.add_argument("--port", type=int, default=8080)
+    ui_parser.add_argument(
+        "--host",
+        default="127.0.0.1",
+        help="address to listen on; the default accepts only this computer (the UI has no login)",
+    )
+    ui_parser.add_argument("--native", action="store_true", help="open in a desktop window")
+    ui_parser.add_argument("--no-browser", action="store_true", help="do not open a browser")
     return parser
 
 
@@ -78,6 +88,19 @@ def main(argv: list[str] | None = None) -> int:
         report = api.doctor()
         print(format_doctor_report(report))
         return 0 if report.ok else 1
+    if args.command == "ui":
+        try:
+            api.run_ui(
+                args.workspace,
+                port=args.port,
+                native=args.native,
+                show=not args.no_browser,
+                host=args.host,
+            )
+        except api.UIUnavailableError as error:
+            print(error)
+            return 1
+        return 0
     return 2  # unreachable: argparse rejects unknown commands
 
 

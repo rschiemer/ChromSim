@@ -67,6 +67,9 @@ jupytext = "*"
 [feature.ui.dependencies]
 nicegui = "*"
 
+[feature.ui.tasks]
+ui = "chromsim ui"
+
 [environments]
 # Everything a developer needs, including the optional UI.
 default = { features = ["test", "lint", "docs", "notebooks", "ui"], solve-group = "main" }

@@ -37,3 +37,4 @@ print(report.ok, report.versions)
 | `pixi run test-all` | all tests, including slow workflow/backend tests |
 | `pixi run lint` | ruff lint and format check |
 | `pixi run docs` | serve this documentation locally |
+| `pixi run ui` | start the optional web UI (see "Web UI, workspaces and jobs") |

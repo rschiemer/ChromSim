@@ -3,6 +3,8 @@
 Plotting only reads results; it never computes science beyond unit conversion for display.
 """
 
+from types import MappingProxyType
+
 import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -10,11 +12,13 @@ from plotly.subplots import make_subplots
 from chromsim import units
 from chromsim.backends.base import SimulationResult
 
-X_AXES = {
-    "CV": ("Volume / CV", lambda result: result.column_volumes),
-    "mL": ("Volume / mL", lambda result: units.from_si(1.0, "mL") * result.volume_m3),
-    "min": ("Time / min", lambda result: result.time_s / 60.0),
-}
+X_AXES = MappingProxyType(
+    {
+        "CV": ("Volume / CV", lambda result: result.column_volumes),
+        "mL": ("Volume / mL", lambda result: units.from_si(1.0, "mL") * result.volume_m3),
+        "min": ("Time / min", lambda result: result.time_s / 60.0),
+    }
+)
 
 
 def plot_chromatogram(
@@ -404,5 +408,28 @@ def plot_pareto(
     )
     figure.update_layout(
         template="simple_white", xaxis_title=labels.get(x, x), yaxis_title=labels.get(y, y)
+    )
+    return figure
+
+
+def plot_correlation_matrix(labels: list[str], matrix) -> go.Figure:
+    """Heat map of a correlation matrix given as labels and a nested list (e.g. from a stored fit
+    record)."""
+    values = np.asarray(matrix, dtype=float)
+    figure = go.Figure(
+        go.Heatmap(
+            z=values,
+            x=labels,
+            y=labels,
+            zmin=-1,
+            zmax=1,
+            colorscale="RdBu",
+            reversescale=True,
+            text=np.round(values, 2),
+            texttemplate="%{text}",
+        )
+    )
+    figure.update_layout(
+        template="simple_white", title="Parameter correlation", yaxis={"autorange": "reversed"}
     )
     return figure
