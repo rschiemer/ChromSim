@@ -121,3 +121,20 @@ def test_load_mapping_profile_errors(tmp_path):
     bad.write_text("name: x\nlayout: sideways\n")
     with pytest.raises(ChromSimError, match="Invalid mapping profile"):
         load_mapping_profile(bad)
+
+
+@pytest.mark.parametrize("end_cell", ["", "n/a"])
+def test_unreadable_fraction_volume_is_reported(tmp_path, end_cell):
+    path = tmp_path / "volumes.csv"
+    path.write_text(f"Fraction,Start,End,Protein\nA1,1.0,2.0,0.5\nA2,2.0,{end_cell},0.4\n")
+    profile = AssayMappingProfile(
+        name="t",
+        layout="wide",
+        fraction_column="Fraction",
+        start_volume_column="Start",
+        end_volume_column="End",
+        analytes=[{"column": "Protein", "analyte": "p", "unit": "g/L"}],
+        readouts={"p": ["mAb"]},
+    )
+    with pytest.raises(ChromSimError, match="row 3.*volume.*fraction 'A2'"):
+        read_assay(path, profile)

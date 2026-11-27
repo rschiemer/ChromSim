@@ -6,7 +6,7 @@ are in ChromSim's internal units (volume in m³, time in s, absorbance in AU, co
 S/m); the units of the export are kept for reference and display.
 """
 
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
 
 import numpy as np
 
@@ -59,10 +59,6 @@ class Signal:
     def values_in(self, unit: str) -> np.ndarray:
         """Values converted to ``unit`` for display, e.g. ``"mAU"`` or ``"mS/cm"``."""
         return units.signal_from_si(self.values, self.unit, unit)
-
-    def shifted(self, delta_x: float) -> "Signal":
-        """The same signal with its axis moved by ``delta_x`` (m³ or s)."""
-        return replace(self, x=self.x + delta_x)
 
 
 @dataclass(frozen=True)

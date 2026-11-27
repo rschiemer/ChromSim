@@ -127,3 +127,13 @@ def test_workspace_simulation_job(tmp_path):
         assert np.trapezoid(result.outlet("tracer"), result.time_s) == pytest.approx(6.0, rel=1e-3)
     finally:
         workspace.close()
+
+
+def test_fit_progress_counts_every_start():
+    from chromsim.estimation.parameters import FitParameter
+    from chromsim.jobs import FitSetup
+
+    parameter = FitParameter(path="resin.col_porosity", lower=0.2, upper=0.6)
+    setup = FitSetup(project="p", result_name="r", parameters=[parameter], max_evaluations=50)
+    assert setup.expected_evaluations() == 50
+    assert setup.model_copy(update={"multi_start": 3}).expected_evaluations() == 200

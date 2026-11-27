@@ -143,3 +143,16 @@ def test_apply_to_subtracts_uv_delay_from_tubing():
     project.system.uv_delay_volume = "0.5 mL"
     with pytest.raises(ChromSimError, match="check system.uv_delay_volume"):
         analyse_tracers(runs(), COLUMN, FLOW).apply_to(project)
+
+
+def test_asymmetry_uses_the_run_window():
+    # A taller, tailing peak outside the window (e.g. a later artefact) must not be measured.
+    dextran = runs()[1]
+    spike = np.where(VOLUME >= 13.0 * ML, 5.0 * np.exp(-(VOLUME - 13.0 * ML) / (0.3 * ML)), 0.0)
+    values = dextran.signal.values + spike
+    signal = Signal("dex", "uv", "volume", VOLUME, values, "AU", "mAU")
+    windowed = TracerRun(
+        "dextran", "non_penetrating", signal, 1 * ML, INJECTION, window=(1 * ML, 5 * ML)
+    )
+    analysis = analyse_tracers([windowed], COLUMN, FLOW, system_volume_m3=0.45 * ML)
+    assert analysis.peaks[0].asymmetry == pytest.approx(1.0, rel=1e-2)

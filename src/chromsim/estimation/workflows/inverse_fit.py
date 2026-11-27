@@ -249,7 +249,11 @@ def inverse_fit(
     )
     jacobian = outcome.jacobian
     if jacobian is None:  # optimizer without a Jacobian: compute it at the optimum for uncertainty
-        jacobian = finite_difference_jacobian(ScaledProblem(problem), x_scaled, final_residuals)
+        scaled = ScaledProblem(problem)
+        try:
+            jacobian = finite_difference_jacobian(scaled, x_scaled, final_residuals)
+        finally:
+            scaled.close()  # stops the worker processes of parallel > 1
     return FitResult(
         parameters=list(parameters),
         experiment_names=names,

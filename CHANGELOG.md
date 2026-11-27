@@ -45,6 +45,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Docs: "Fractionation and process optimization", ADR 0010 (fractionation; SPEC §7.4 note).
 
 ### Changed
+- Code review and simplification (ponytail review, 2026-11-27):
+  - `asymmetry_factor(..., window=)` restricts the peak search to a range, like `peak_moments`.
+  - `FitSetup.expected_evaluations()`; fit progress bars count every multi-start.
+  - `plot_correlation` reuses `plot_correlation_matrix`; `FileStorage` checks for missing files
+    in one place; `api.check_discretisation` is the checks function itself (no wrapper).
+  - `akta_xlsx` recognises a file from its first rows instead of reading the whole workbook.
+  - Removed the unused `Signal.shifted`.
 - Module-level constant tables are read-only (`MappingProxyType`, `frozenset`, tuples); the HIC
   parameter tables moved into the isotherm class.
 - Nelder–Mead starts from a simplex of 10 % of each scaled range (`initial_step`), so objectives
@@ -83,6 +90,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Docs: "Calibrating a model", Yamamoto derivation, ADR 0007 (calibration conventions).
 
 ### Fixed
+- `inverse_fit` with an optimizer that returns no Jacobian (e.g. `nelder_mead`) and
+  `parallel > 1` left the worker processes of the final Jacobian running.
+- Tracer asymmetry factors use the run's `window`, like the moments; a larger peak outside the
+  window was measured instead.
+- `read_assay` reports blank or unreadable fraction start/end volumes instead of storing NaN
+  volumes (silent NaN comparisons) or failing with a bare `ValueError`.
+- `plot_overlay` axis titles list only the signals that are drawn.
+- Web UI: saving a project under an invalid name, or applying a tracer analysis that does not fit
+  the system volumes, shows the error instead of raising an unhandled exception.
 - Text assigned into nested dicts of a project (e.g. `step.inlet["mAb"] = "1 g/L"`) no longer
   crashes unit conversion.
 - `compare_with_assay(..., warn=False)` to avoid repeated mismatch warnings during fits.

@@ -172,7 +172,7 @@ def read_text_rows(path: Path) -> list[list[str]]:
         delimiter = csv.Sniffer().sniff(sample, delimiters="\t;,").delimiter
     except csv.Error:
         delimiter = "\t"
-    return [row for row in csv.reader(io.StringIO(text), delimiter=delimiter)]
+    return list(csv.reader(io.StringIO(text), delimiter=delimiter))
 
 
 @register_importer

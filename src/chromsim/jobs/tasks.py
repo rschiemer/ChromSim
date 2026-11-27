@@ -109,6 +109,10 @@ class FitSetup(BaseModel):
     parallel: int = 1
     multi_start: int = 0
 
+    def expected_evaluations(self) -> int:
+        """Rough number of residual evaluations over all starts (for progress bars)."""
+        return self.max_evaluations * (self.multi_start + 1)
+
 
 def build_fit_experiment(storage: FileStorage, setup: FitSetup) -> FitExperiment:
     """Turn a setup into a FitExperiment with UV and assay targets."""
@@ -178,11 +182,11 @@ def run_fit(storage: FileStorage, setup: FitSetup, callback=None) -> str:
 
 def fit_task(context: JobContext, setup_json: dict) -> str:
     setup = FitSetup.model_validate(setup_json)
+    expected = setup.expected_evaluations()
 
     def progress(evaluation, cost):
         context.report(
-            min(evaluation / setup.max_evaluations, 0.99),
-            f"evaluation {evaluation}: cost {cost:.4g}",
+            min(evaluation / expected, 0.99), f"evaluation {evaluation}: cost {cost:.4g}"
         )
 
     context.report(0.0, "preparing")

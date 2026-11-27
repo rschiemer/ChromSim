@@ -119,15 +119,19 @@ def peak_maximum(x, y) -> tuple[float, float]:
     return float(x_top), float(a * x_top**2 + b * x_top + c)
 
 
-def asymmetry_factor(x, y, height_fraction: float = 0.1) -> float:
+def asymmetry_factor(
+    x, y, height_fraction: float = 0.1, window: tuple[float, float] | None = None
+) -> float:
     """Asymmetry factor A_s = b/a at ``height_fraction`` of the peak height (default 10 %).
+
+    ``window`` restricts the search for the peak to that x range, as in :func:`peak_moments`.
 
     Raises
     ------
     ChromSimError
         If the signal does not fall below that height on both sides of the peak.
     """
-    x, y = np.asarray(x, dtype=float), np.asarray(y, dtype=float)
+    x, y = _window(x, y, window)
     apex = int(np.argmax(y))
     level = height_fraction * y[apex]
     front = np.nonzero(y[:apex] < level)[0]

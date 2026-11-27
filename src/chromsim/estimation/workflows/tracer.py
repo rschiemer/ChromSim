@@ -182,20 +182,18 @@ def peclet_from_variance_ratio(ratio: float) -> float:
 
 
 def _moments(run: TracerRun):
-    moments = peak_moments(run.signal.x - run.injection_start_m3, run.signal.values, _shift(run))
+    x = run.signal.x - run.injection_start_m3
+    window = None
+    if run.window is not None:
+        window = (run.window[0] - run.injection_start_m3, run.window[1] - run.injection_start_m3)
+    moments = peak_moments(x, run.signal.values, window)
     return moments.corrected_for_injection(run.injection_volume_m3)
-
-
-def _shift(run: TracerRun):
-    if run.window is None:
-        return None
-    return (run.window[0] - run.injection_start_m3, run.window[1] - run.injection_start_m3)
 
 
 def _asymmetry_or_none(run: TracerRun) -> float | None:
     """Asymmetry factor, or None (with a warning) if the recorded peak is too short for it."""
     try:
-        return asymmetry_factor(run.signal.x, run.signal.values)
+        return asymmetry_factor(run.signal.x, run.signal.values, window=run.window)
     except ChromSimError as error:
         logger.warning("Tracer run '%s': no asymmetry factor (%s)", run.name, error)
         return None

@@ -16,13 +16,18 @@ from chromsim.data.importers.registry import register_importer
 from chromsim.errors import ChromSimError
 
 
-def read_sheet_rows(path: Path, sheet: str | None = None) -> list[list[str]]:
-    """All cells of a worksheet as text (numbers via ``repr`` so no precision is lost)."""
+def read_sheet_rows(
+    path: Path, sheet: str | None = None, max_rows: int | None = None
+) -> list[list[str]]:
+    """Cells of a worksheet as text (numbers via ``repr`` so no precision is lost).
+
+    ``max_rows`` reads only the first rows (enough to recognise the header).
+    """
     workbook = openpyxl.load_workbook(path, read_only=True, data_only=True)
     try:
         worksheet = workbook[sheet] if sheet else workbook.worksheets[0]
         rows = []
-        for row in worksheet.iter_rows(values_only=True):
+        for row in worksheet.iter_rows(max_row=max_rows, values_only=True):
             rows.append(
                 [
                     "" if cell is None else (repr(cell) if isinstance(cell, float) else str(cell))
@@ -46,7 +51,7 @@ class AktaXlsxImporter:
         if path.suffix.lower() not in self.file_extensions:
             return False
         try:
-            return looks_like_unicorn(read_sheet_rows(path)[:6])
+            return looks_like_unicorn(read_sheet_rows(path, max_rows=6))
         except Exception:  # unreadable or non-Excel content: just "not mine"
             return False
 

@@ -32,8 +32,7 @@ from chromsim.analysis.process_optimization import (
     process_variable_candidates,
 )
 from chromsim.backends import SimulationResult, get_backend
-from chromsim.backends.checks import DiscretisationCheck
-from chromsim.backends.checks import check_discretisation as _check_discretisation
+from chromsim.backends.checks import DiscretisationCheck, check_discretisation
 from chromsim.core.column import Column, ColumnModel
 from chromsim.core.components import Component
 from chromsim.core.method import ResolvedStep, Step
@@ -326,22 +325,6 @@ def simulate(project: Project) -> SimulationResult:
         If the solver fails.
     """
     return get_backend(project.solver.backend).simulate(project)
-
-
-def check_discretisation(project: Project) -> DiscretisationCheck:
-    """Simulate on the project grid and on a doubled grid and report the change (SPEC §7.1).
-
-    Parameters
-    ----------
-    project : Project
-        The project to check (not modified).
-
-    Returns
-    -------
-    DiscretisationCheck
-        NRMSE per component between the two grids; well below 0.01 means the grid is fine enough.
-    """
-    return _check_discretisation(project)
 
 
 def optimize(
