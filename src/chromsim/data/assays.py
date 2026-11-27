@@ -303,10 +303,18 @@ def read_assay(path: str | Path, profile: AssayMappingProfile | str | Path) -> F
         fraction = str(row[profile.fraction_column]).strip()
         if not fraction or fraction.lower() == "nan":
             continue
-        if profile.start_volume_column:
-            start, _ = _parse_value(row[profile.start_volume_column], profile.decimal)
-            end, _ = _parse_value(row[profile.end_volume_column], profile.decimal)
-            fraction_volumes[fraction] = (start * volume_factor, end * volume_factor)
+        if profile.start_volume_column and profile.end_volume_column:
+            cells = (row[profile.start_volume_column], row[profile.end_volume_column])
+            try:
+                volumes = [_parse_value(cell, profile.decimal)[0] for cell in cells]
+            except ValueError:
+                volumes = [np.nan]
+            if np.isnan(volumes).any():
+                raise ChromSimError(
+                    f"{path.name}, row {row_number + profile.skip_rows + 2}: cannot read the "
+                    f"start/end volume {cells} of fraction '{fraction}'."
+                )
+            fraction_volumes[fraction] = (volumes[0] * volume_factor, volumes[1] * volume_factor)
 
         if profile.layout == "wide":
             entries = [

@@ -64,8 +64,12 @@ def tracer_tab(workspace: api.Workspace) -> None:
                 ui.button("Apply and save", on_click=lambda: apply(save_as.value)).props("outline")
 
     def apply(name):
-        project = workspace.storage.load_project(workspace.current_project)
-        workspace.storage.save_project(name, state["analysis"].apply_to(project))
+        try:
+            project = workspace.storage.load_project(workspace.current_project)
+            workspace.storage.save_project(name, state["analysis"].apply_to(project))
+        except api.ChromSimError as error:
+            components.show_error(error)
+            return
         ui.notify(f"Saved project '{name}'", type="positive")
 
     ui.button("Analyse tracers", icon="insights", on_click=analyse).mark("analyse-tracers")
@@ -141,16 +145,20 @@ def yamamoto_tab(workspace: api.Workspace) -> None:
                 )
 
     def apply(name):
-        project = workspace.storage.load_project(workspace.current_project)
         result = state["result"]
-        updated = api.set_values(
-            project,
-            [
-                (f"isotherm.parameters.{component.value}.nu", result.nu, None),
-                (f"isotherm.parameters.{component.value}.k_eq", result.k_eq, None),
-            ],
-        )
-        workspace.storage.save_project(name, updated)
+        try:
+            project = workspace.storage.load_project(workspace.current_project)
+            updated = api.set_values(
+                project,
+                [
+                    (f"isotherm.parameters.{component.value}.nu", result.nu, None),
+                    (f"isotherm.parameters.{component.value}.k_eq", result.k_eq, None),
+                ],
+            )
+            workspace.storage.save_project(name, updated)
+        except api.ChromSimError as error:
+            components.show_error(error)
+            return
         ui.notify(f"Saved project '{name}'", type="positive")
 
     ui.button("Yamamoto fit", icon="show_chart", on_click=fit).mark("yamamoto-fit")

@@ -66,3 +66,10 @@ def test_window_and_non_positive_area():
     assert peak_moments(X, gaussian(40.0, 3.0), window=(20.0, 60.0)).mean == pytest.approx(40.0)
     with pytest.raises(ChromSimError, match="not positive"):
         peak_moments(X, -gaussian(40.0, 3.0))
+
+
+def test_asymmetry_window_ignores_a_larger_peak_outside_it():
+    tailing = np.convolve(gaussian(30.0, 1.0), np.exp(-X / 3.0), mode="full")[: X.size]
+    y = gaussian(85.0, 2.0) + tailing  # the tailing peak is the global maximum
+    assert asymmetry_factor(X, y) > 1.5
+    assert asymmetry_factor(X, y, window=(70.0, 100.0)) == pytest.approx(1.0, rel=1e-3)

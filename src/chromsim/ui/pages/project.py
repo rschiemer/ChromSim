@@ -117,13 +117,13 @@ def page(workspace: api.Workspace) -> None:
 
     async def upload_project(event):
         text = (await event.file.read()).decode("utf-8")
+        name = event.file.name.rsplit(".", 1)[0]
         try:
             project = api.project_from_yaml(text, source=event.file.name)
+            workspace.storage.save_project(name, project)
         except api.ChromSimError as error:
             components.show_error(error)
             return
-        name = event.file.name.rsplit(".", 1)[0]
-        workspace.storage.save_project(name, project)
         workspace.current_project = name
         ui.notify(f"Loaded project '{name}'", type="positive")
         ui.navigate.reload()

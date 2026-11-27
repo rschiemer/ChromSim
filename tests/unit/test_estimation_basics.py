@@ -183,3 +183,37 @@ def test_get_value_in_column_volumes():
     assert get_value(project, "method.3.duration", unit="CV") == pytest.approx(20.0)
     with pytest.raises(ChromSimError, match='unit="CV"'):
         get_value(project, "method.3.duration", unit="mL")
+
+
+def test_jacobian_workers_are_shut_down_after_a_fit_without_jacobian(monkeypatch):
+    # nelder_mead returns no Jacobian, so inverse_fit evaluates one itself; with parallel > 1
+    # that starts worker processes, which must be shut down afterwards.
+    from chromsim.estimation.objectives import FitExperiment
+    from chromsim.estimation.workflows import inverse_fit as module
+
+    class InstantBackend:
+        def simulate(self, project):
+            return None
+
+    class PorosityTarget:  # residual: distance of ε_c from 0.4, no simulation needed
+        def residuals(self, result, project):
+            return np.array([project.resin.col_porosity - 0.4])
+
+    closed = []
+
+    class RecordingProblem(module.ScaledProblem):
+        def close(self):
+            closed.append(True)
+            super().close()
+
+    monkeypatch.setattr(module, "get_backend", lambda name: InstantBackend())
+    monkeypatch.setattr(module, "ScaledProblem", RecordingProblem)
+    fit = module.inverse_fit(
+        [FitExperiment("e", make_project(), [PorosityTarget()])],
+        [FitParameter(path="resin.col_porosity", lower=0.2, upper=0.6)],
+        optimizer="nelder_mead",
+        max_evaluations=60,
+    )
+    assert fit.values["resin.col_porosity"] == pytest.approx(0.4, abs=1e-3)
+    assert fit.jacobian.shape == (1, 1)
+    assert closed == [True]

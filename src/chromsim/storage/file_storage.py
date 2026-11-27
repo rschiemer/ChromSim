@@ -67,6 +67,13 @@ class FileStorage:
         for folder in ("projects", "results", "optimizations", "data", "records"):
             (self.root / folder).mkdir(parents=True, exist_ok=True)
 
+    def _existing(self, folder: str, file_name: str, what: str, name: str) -> Path:
+        """Path of a stored file; ``ChromSimError`` naming the item if it is missing."""
+        path = self.root / folder / file_name
+        if not path.is_file():
+            raise ChromSimError(f"No {what} '{name}' in workspace {self.root}.")
+        return path
+
     # --- projects -----------------------------------------------------------------------------
 
     def save_project(self, name: str, project: Project) -> None:
@@ -74,10 +81,9 @@ class FileStorage:
         self.save_record("provenance", f"project {name}", stamp())
 
     def load_project(self, name: str) -> Project:
-        path = self.root / "projects" / f"{_check_name(name)}.yaml"
-        if not path.is_file():
-            raise ChromSimError(f"No project '{name}' in workspace {self.root}.")
-        return load_project(path)
+        return load_project(
+            self._existing("projects", f"{_check_name(name)}.yaml", "project", name)
+        )
 
     def list_projects(self) -> list[str]:
         return sorted(path.stem for path in (self.root / "projects").glob("*.yaml"))
@@ -88,17 +94,11 @@ class FileStorage:
         write_simulation_result(result, self.root / "results" / f"{_check_name(name)}.h5")
 
     def load_simulation_result(self, name: str) -> SimulationResult:
-        path = self.root / "results" / f"{_check_name(name)}.h5"
-        if not path.is_file():
-            raise ChromSimError(f"No simulation result '{name}' in workspace {self.root}.")
-        return read_simulation_result(path)
+        return read_simulation_result(self.result_file(name))
 
     def result_file(self, name: str) -> Path:
         """Path of a stored simulation result's HDF5 file (e.g. for downloads)."""
-        path = self.root / "results" / f"{_check_name(name)}.h5"
-        if not path.is_file():
-            raise ChromSimError(f"No simulation result '{name}' in workspace {self.root}.")
-        return path
+        return self._existing("results", f"{_check_name(name)}.h5", "simulation result", name)
 
     def list_simulation_results(self) -> list[str]:
         return sorted(path.stem for path in (self.root / "results").glob("*.h5"))
@@ -107,9 +107,9 @@ class FileStorage:
         write_optimization_result(result, self.root / "optimizations" / f"{_check_name(name)}.h5")
 
     def load_optimization_result(self, name: str) -> OptimizationResult:
-        path = self.root / "optimizations" / f"{_check_name(name)}.h5"
-        if not path.is_file():
-            raise ChromSimError(f"No optimization result '{name}' in workspace {self.root}.")
+        path = self._existing(
+            "optimizations", f"{_check_name(name)}.h5", "optimization result", name
+        )
         return read_optimization_result(path)
 
     # --- raw data (read-only once stored) -----------------------------------------------------
@@ -130,10 +130,7 @@ class FileStorage:
         return path
 
     def raw_file_path(self, name: str) -> Path:
-        path = self.root / "data" / _check_name(name)
-        if not path.is_file():
-            raise ChromSimError(f"No data file '{name}' in workspace {self.root}.")
-        return path
+        return self._existing("data", _check_name(name), "data file", name)
 
     def list_raw_files(self) -> list[str]:
         return sorted(path.name for path in (self.root / "data").iterdir() if path.is_file())

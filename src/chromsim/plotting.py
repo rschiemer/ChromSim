@@ -163,9 +163,8 @@ def plot_overlay(
         measured = [
             s for s in experiment.signals.values() if s.kind in kinds and s.x_axis == "volume"
         ]
-    for signal, dash in [(s, "solid") for s in measured] + [
-        (s, "dash") for s in simulated if s.kind in kinds
-    ]:
+    drawn = [(s, "solid") for s in measured] + [(s, "dash") for s in simulated if s.kind in kinds]
+    for signal, dash in drawn:
         figure.add_trace(
             go.Scatter(
                 x=_x_values(signal.x, x, column_volume_m3),
@@ -199,10 +198,8 @@ def plot_overlay(
                     yanchor="bottom",
                     font={"size": 9, "color": "gray"},
                 )
-    left_units = sorted({s.original_unit for s in measured + list(simulated) if s.kind == "uv"})
-    right_units = sorted(
-        {s.original_unit for s in measured + list(simulated) if s.kind != "uv" and s.kind in kinds}
-    )
+    left_units = sorted({s.original_unit for s, _ in drawn if s.kind == "uv"})
+    right_units = sorted({s.original_unit for s, _ in drawn if s.kind != "uv"})
     figure.update_xaxes(title_text="Volume / mL" if x == "mL" else "Volume / CV")
     figure.update_yaxes(
         title_text="UV / " + ", ".join(left_units) if left_units else "UV",
@@ -210,7 +207,7 @@ def plot_overlay(
         rangemode="tozero",
     )
     figure.update_yaxes(
-        title_text=" , ".join(right_units), secondary_y=True, showgrid=False, tickmode="auto"
+        title_text=", ".join(right_units), secondary_y=True, showgrid=False, tickmode="auto"
     )
     figure.update_layout(template="simple_white", legend={"orientation": "h", "y": -0.2})
     return figure
@@ -355,24 +352,7 @@ def plot_yamamoto(result) -> go.Figure:
 
 def plot_correlation(report) -> go.Figure:
     """Heat map of the parameter correlation matrix of an :class:`UncertaintyReport`."""
-    correlation = report.correlation
-    figure = go.Figure(
-        go.Heatmap(
-            z=correlation.to_numpy(),
-            x=list(correlation.columns),
-            y=list(correlation.index),
-            zmin=-1,
-            zmax=1,
-            colorscale="RdBu",
-            reversescale=True,
-            text=np.round(correlation.to_numpy(), 2),
-            texttemplate="%{text}",
-        )
-    )
-    figure.update_layout(
-        template="simple_white", title="Parameter correlation", yaxis={"autorange": "reversed"}
-    )
-    return figure
+    return plot_correlation_matrix(list(report.correlation.columns), report.correlation)
 
 
 def plot_pareto(

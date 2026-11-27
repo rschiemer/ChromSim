@@ -61,6 +61,20 @@ def test_overlay_draws_measured_solid_and_simulated_dashed_with_fractions():
         plot_overlay(experiment, x="CV")
 
 
+def test_overlay_axis_titles_list_only_drawn_signals():
+    from chromsim.data.experiment import Signal
+    from chromsim.plotting import plot_overlay
+
+    x = np.linspace(0.0, 10e-6, 11)
+    uv = Signal("UV (sim)", "uv", "volume", x, np.zeros(11), "AU", "mAU")
+    cond = Signal("Cond (sim)", "conductivity", "volume", x, np.ones(11), "S/m", "mS/cm")
+    ph = Signal("pH (sim)", "ph", "volume", x, np.full(11, 7.0), "pH", "pH")
+    figure = plot_overlay(simulated=[uv, cond, ph], kinds=("conductivity", "ph"))
+    assert [trace.name for trace in figure.data] == ["Cond (sim) / mS/cm", "pH (sim) / pH"]
+    assert figure.layout.yaxis.title.text == "UV"  # no UV curve drawn, so no UV unit
+    assert figure.layout.yaxis2.title.text == "mS/cm, pH"
+
+
 def test_fraction_comparison_plot():
     import pandas as pd
 
