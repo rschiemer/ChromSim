@@ -7,6 +7,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ## [Unreleased]
 
 ### Added
+- Colloidal isotherms (ADR 0011):
+  - `Colloidal`: Xu & Lenhoff (2009) colloidal isotherm, CADET-native (`MultiComponentColloidal`)
+    with a Python flux, so it also runs on the reference backend (≤ 0.3 % NRMSE vs CADET).
+    Descriptive parameter names; mapping pinned against CADET-Core's C++ source, whose
+    interface docs describe the ln K_e power factor/exponent the wrong way round.
+  - `CPA`: colloidal particle adsorption model (Briskot et al. 2021) as a Python isotherm:
+    Debye screening, Grahame potentials, closed-form sphere–plane double-layer well,
+    scaled-particle-theory available surface function, Yukawa lateral repulsion. Building
+    blocks are public functions (`debye_kappa`, `grahame_potential`, `well_depth`,
+    `available_surface_function`, `lateral_energy`, `CPA.equilibrium_factor`).
+  - Tests: textbook limits of every CPA building block, Colloidal flux vs the documented
+    equation, Colloidal → Linear identity on CADET, Colloidal reference vs CADET (two proteins,
+    nonlinear).
+- Docs: theory pages for both isotherms, "Colloidal adsorption models" (background and
+  literature), ADR 0011.
 - Phase 7 web UI and server-ready plumbing (SPEC §8, §8.1):
   - `FileStorage` workspace folder: projects (YAML), write-once read-only data files, results
     and optimization histories (HDF5), JSON records; `created_by`/`created_at` on everything.

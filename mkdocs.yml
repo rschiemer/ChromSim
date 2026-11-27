@@ -57,6 +57,9 @@ nav:
           - HIC water on hydrophobic surfaces: theory/isotherms/hic_water_on_hydrophobic_surfaces.md
           - Bi-Langmuir: theory/isotherms/bi_langmuir.md
           - Mixed-mode Langmuir (Python): theory/isotherms/mixed_mode_langmuir.md
+          - Colloidal (Xu & Lenhoff): theory/isotherms/colloidal.md
+          - Colloidal particle adsorption (Python): theory/isotherms/cpa.md
+      - Colloidal adsorption models: theory/colloidal_models.md
       - Yamamoto method: theory/yamamoto.md
   - API reference: api/index.md
   - Decisions:
@@ -71,6 +74,7 @@ nav:
       - 0008 Reference backend: decisions/0008-reference-backend.md
       - 0009 Optimizer interface: decisions/0009-optimizer-interface.md
       - 0010 Fractionation: decisions/0010-fractionation.md
+      - 0011 Colloidal isotherms: decisions/0011-colloidal-isotherms.md
 
 extra_javascript:
   - javascripts/mathjax.js

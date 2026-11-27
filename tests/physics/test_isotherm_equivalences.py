@@ -146,3 +146,39 @@ def test_hic_with_one_ligand_and_no_water_term_is_langmuir(model):
         load,
     )
     assert nrmse(outlet(hic, "A"), outlet(langmuir, "A")) < IDENTITY_NRMSE
+
+
+def test_colloidal_without_lattice_and_salt_dependence_is_linear():
+    # b_pp = 0 removes the lattice term and k_b = 0 makes ln K_e = k_a constant:
+    # dq/dt = k_kin (c − q/K_e) is Linear with k_eq = K_e and k_d = k_kin/K_e.
+    load = {"salt": "50 mM", "A": "1 mM"}
+    k_e, k_kin = 2.0, 1.0
+    colloidal = make_binding_project(
+        SALT + [{"name": "A"}],
+        {
+            "model": "Colloidal",
+            "parameters": {
+                "A": {
+                    "radius": 4e-9,
+                    "ln_ke_salt_factor": float(np.log(k_e)),
+                    "ln_ke_salt_exponent": 0.0,
+                    "b_pp_salt_factor": 0.0,
+                    "b_pp_salt_exponent": 0.0,
+                    "k_kin": k_kin,
+                }
+            },
+            "global_parameters": {
+                "phase_ratio": 5e7,
+                "kappa_factor": 0.0,
+                "kappa_exponent": 0.0,
+                "kappa_constant": 1e-9,
+            },
+        },
+        load,
+    )
+    linear = make_binding_project(
+        SALT + [{"name": "A"}],
+        {"model": "Linear", "parameters": {"A": {"k_eq": k_e, "k_kin": k_kin / k_e}}},
+        load,
+    )
+    assert nrmse(outlet(colloidal, "A"), outlet(linear, "A")) < IDENTITY_NRMSE
