@@ -17,7 +17,7 @@ data); several are for non-commercial use only.
 
 | Case study | Data | What it shows |
 |---|---|---|
-| 01 UNICORN imports | 4 native UNICORN 5 `.res` files, 4 UNICORN 7 CSV exports, 3 UNICORN 5 `.asc`/CSV exports (ÄKTA prime, purifier, pure) | every file imports with `read_chromatogram`; units, fractions, injections, logbook |
+| 01 UNICORN imports | 4 native UNICORN 5 `.res` files, 4 UNICORN 7 CSV exports, 3 UNICORN 5 `.asc`/CSV exports, 3 UNICORN 5 `.xls` exports (ÄKTA prime, purifier, pure) | every file imports with `read_chromatogram`; units, fractions, injections, logbook |
 | 02 Lysozyme on a cation exchanger | Fraunhofer IME (Menzel & Buyel, via CADET-MCMC): tracer pulses with/without column, lysozyme gradients 6–124 CV and a step | full calibration from measured data: tracer moments → dextran-pulse fit → Yamamoto → inverse fit → prediction of runs not used in the fit |
 | 03 Yamamoto cross-check | CADET-Workshop: 3 proteins × 4 gradients | ChromSim's Yamamoto result agrees with CADET-Process's to < 0.3 % (ν) and ~1 % (k_eq); how residuals reveal an inconsistent run |
 

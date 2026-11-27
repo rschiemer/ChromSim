@@ -2,6 +2,7 @@
 
 from chromsim.data.importers import (  # noqa: F401  (registration)
     akta_csv,
+    akta_xls,
     akta_xlsx,
     generic_csv,
     generic_xlsx,

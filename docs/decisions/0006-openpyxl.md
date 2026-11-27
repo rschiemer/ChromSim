@@ -14,6 +14,6 @@ standard `.xlsx` engine and is used directly for UNICORN sheets (read-only mode)
 
 ## Consequences
 - `.xlsx` chromatograms and assays work out of the box.
-- The legacy `.xls` format is not supported. Export as `.xlsx` or CSV instead.
+- The legacy `.xls` format is not supported by openpyxl; see ADR 0012 (xlrd) for it.
 - The fixture generator (`tests/data/generate_fixtures.py`) also uses openpyxl to write the
   synthetic Excel fixtures.

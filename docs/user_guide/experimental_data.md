@@ -20,6 +20,7 @@ Tutorial 02 (`examples/02_compare_with_data.py`) walks through a complete exampl
 |---|---|---|
 | `akta_csv` | ÄKTA UNICORN text export (`.csv`, `.asc`, `.txt`) | UTF-16 or UTF-8; tab, comma or semicolon; decimal commas |
 | `akta_xlsx` | ÄKTA UNICORN Excel export (`.xlsx`) | first worksheet unless `sheet=` |
+| `akta_xls` | ÄKTA UNICORN legacy Excel 97–2003 export (`.xls`) | first worksheet unless `sheet=` |
 | `unicorn_res` | native UNICORN 3–5 result file (`.res`) | ÄKTA prime/purifier/explorer; binary, read directly |
 | `generic_csv` | any delimited text file, with or without header | needs `mapping=` (see below) |
 | `generic_xlsx` | any Excel table | needs `mapping=`; `sheet=` optional |
@@ -41,7 +42,7 @@ UNICORN writes two columns per curve (x and value). Above the data are a row of 
 
 !!! note "Tested on real exports"
     Besides the synthetic files in `tests/data/akta/`, the UNICORN importers have been run on
-    eleven real files from ÄKTA prime, purifier and pure systems published by other groups
+    fourteen real files from ÄKTA prime, purifier and pure systems published by other groups
     (case study 01, `examples/case_studies/`). Still check once with an export from your own
     system: UNICORN's export options (curve selection, x axis relative to injection) vary.
 
@@ -55,8 +56,11 @@ system recorded (not shifted to the injection); injection marks are in
 as CSV or XLSX. The layout is described in the module docstring of
 `chromsim/data/importers/unicorn_res.py`.
 
-Legacy Excel 97–2003 exports (`.xls`) cannot be read (that needs another dependency); open them
-in Excel and save as `.xlsx`, or export from UNICORN as CSV.
+### Legacy Excel exports (`.xls`)
+
+UNICORN 5 writes Excel 97–2003 workbooks with the same layout as the text export, usually with a
+run-number row on top and units such as `" %B"` or `" ml/min"`. `akta_xls` reads them (with
+`xlrd`, ADR 0012) and normalises the unit spellings, as all UNICORN importers do.
 
 ### Generic CSV
 

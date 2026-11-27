@@ -17,13 +17,15 @@
 # ChromSim's importer tests use synthetic files. Here we import real files written by ÄKTA
 # systems and published on GitHub by other groups (licenses in `fetch_data.py`):
 #
-#     pixi run python examples/case_studies/fetch_data.py unicorn5_res unicorn7_csv unicorn5_asc
+#     pixi run python examples/case_studies/fetch_data.py unicorn5_res unicorn7_csv unicorn5_asc \\
+#         unicorn5_xls
 #
 # - `unicorn5_res`: native UNICORN 5 result files (`.res`, binary): an ÄKTA prime sample and
 #   three SEC runs on a Superdex 200 16/60 (ÄKTA purifier).
 # - `unicorn7_csv`: UNICORN 7 CSV exports (UTF-16, tab, `Chrom.1_` names): one SEC run and three
 #   HisTrap (IMAC) + Superdex 75 runs.
 # - `unicorn5_asc`: UNICORN 5 `.asc`/CSV exports (`<result>:<n>_` curve names): three runs.
+# - `unicorn5_xls`: UNICORN 5 legacy Excel exports (`.xls`): three purification runs.
 #
 # One call, `api.read_chromatogram(path)`, picks the right importer for each.
 
@@ -38,12 +40,12 @@ HERE = Path(__file__).parent if "__file__" in globals() else Path.cwd()
 DATA = HERE / "data"
 OUTPUT = HERE / "output"
 OUTPUT.mkdir(exist_ok=True)
-FOLDERS = ("unicorn5_res", "unicorn7_csv", "unicorn5_asc")
+FOLDERS = ("unicorn5_res", "unicorn7_csv", "unicorn5_asc", "unicorn5_xls")
 files = sorted(
     path
     for folder in FOLDERS
     for path in (DATA / folder).glob("*")
-    if path.suffix.lower() in (".res", ".csv", ".asc")
+    if path.suffix.lower() in (".res", ".csv", ".asc", ".xls")
 )
 if not files:
     raise SystemExit(f"No data in {DATA}; run examples/case_studies/fetch_data.py first.")
@@ -68,7 +70,8 @@ for path in files:
     )
 summary = pd.DataFrame(rows)
 print(summary.to_string(index=False, max_colwidth=60))
-assert len(experiments) == 11 and set(summary["importer"]) == {"unicorn_res", "akta_csv"}
+assert len(experiments) == 14
+assert set(summary["importer"]) == {"unicorn_res", "akta_csv", "akta_xls"}
 
 # %% [markdown]
 # What the importers take care of, file by file:
@@ -84,6 +87,8 @@ assert len(experiments) == 11 and set(summary["importer"]) == {"unicorn_res", "a
 #   comes first.
 # - **UNICORN 5 `.asc`**: curve names carry the result name (`20220817 DAZAP1 …:10_UV`),
 #   which is stripped to `UV`.
+# - **UNICORN 5 `.xls`**: same layout as the text export, with a run-number row on top and
+#   units written as `" %B"` or `" ml/min"`; these are normalised to `%` and `mL/min`.
 
 # %%
 sec = experiments["KOKO038032 1660 S200.res"]

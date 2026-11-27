@@ -4,6 +4,7 @@ import datetime
 import getpass
 import hashlib
 from pathlib import Path
+from types import MappingProxyType
 from typing import Any, Protocol
 
 import numpy as np
@@ -41,6 +42,18 @@ def file_metadata(path: Path, importer_name: str) -> dict:
         "imported_at": datetime.datetime.now(datetime.UTC).isoformat(timespec="seconds"),
         "created_by": getpass.getuser(),
     }
+
+
+# How UNICORN writes some units → how ChromSim's unit handling expects them.
+UNICORN_UNIT_SPELLINGS = MappingProxyType(
+    {"mAu": "mAU", "%B": "%", "% B": "%", "ml/min": "mL/min", "ml/h": "mL/h"}
+)
+
+
+def normalise_unicorn_unit(unit: str) -> str:
+    """A UNICORN unit text (``" %B"``, ``"mAu"``, ``"ml/min"`` …) in ChromSim's spelling."""
+    text = unit.strip()
+    return UNICORN_UNIT_SPELLINGS.get(text, text)
 
 
 def guess_kind(curve_name: str, unit: str) -> str:

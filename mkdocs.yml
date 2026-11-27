@@ -73,6 +73,7 @@ nav:
       - 0009 Optimizer interface: decisions/0009-optimizer-interface.md
       - 0010 Fractionation: decisions/0010-fractionation.md
       - 0011 Third-party data: decisions/0011-third-party-data.md
+      - 0012 xlrd for .xls: decisions/0012-xlrd.md
 
 extra_javascript:
   - javascripts/mathjax.js

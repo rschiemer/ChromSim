@@ -13,7 +13,7 @@ import pytest
 CASE_STUDIES = Path(__file__).parents[2] / "examples" / "case_studies"
 DATA = CASE_STUDIES / "data"
 REQUIRED_DATA = {
-    "cs01_unicorn_imports.py": ("unicorn5_res", "unicorn7_csv", "unicorn5_asc"),
+    "cs01_unicorn_imports.py": ("unicorn5_res", "unicorn7_csv", "unicorn5_asc", "unicorn5_xls"),
     "cs02_lysozyme_cex_calibration.py": ("fraunhofer_lysozyme",),
     "cs03_yamamoto_cross_check.py": ("cadet_workshop_yamamoto",),
 }

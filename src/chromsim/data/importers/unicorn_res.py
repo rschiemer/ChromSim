@@ -28,13 +28,17 @@ marks are returned in ``Experiment.injections_m3``.
 import logging
 import struct
 from pathlib import Path
-from types import MappingProxyType
 
 import numpy as np
 
 from chromsim import units
 from chromsim.data.experiment import Experiment, Signal, fractions_from_marks
-from chromsim.data.importers.base import check_options, file_metadata, guess_kind
+from chromsim.data.importers.base import (
+    check_options,
+    file_metadata,
+    guess_kind,
+    normalise_unicorn_unit,
+)
 from chromsim.data.importers.registry import register_importer
 from chromsim.errors import ChromSimError
 
@@ -57,9 +61,6 @@ SENSOR_VALUE_SCALE_AT = 224
 
 MARK_RECORD_SIZE = 180
 MARK_TEXT = slice(16, 180)
-
-# How UNICORN 5 writes some units → how ChromSim's unit handling expects them.
-UNIT_SPELLINGS = MappingProxyType({"mAu": "mAU", "%B": "%", "ml/min": "mL/min", "": "pH"})
 
 
 def _text(raw: bytes) -> str:
@@ -103,8 +104,8 @@ def read_sensor(data: bytes, size: int, address: int, data_offset: int):
         raise ChromSimError(f"Unexpected x unit '{x_unit}' in a .res sensor block (expected ml).")
     x_scale = struct.unpack_from("<d", header, SENSOR_X_SCALE_AT)[0]
     value_scale = struct.unpack_from("<d", header, SENSOR_VALUE_SCALE_AT)[0]
-    value_unit = _text(header[SENSOR_VALUE_UNIT])
-    value_unit = UNIT_SPELLINGS.get(value_unit, value_unit)
+    # An empty unit is pH (UNICORN 5 stores no unit for it).
+    value_unit = normalise_unicorn_unit(_text(header[SENSOR_VALUE_UNIT])) or "pH"
     raw = data[address + data_offset : address + size]
     pairs = np.frombuffer(raw[: len(raw) // 8 * 8], dtype="<i4").reshape(-1, 2)
     return pairs[:, 0] * x_scale, pairs[:, 1] * value_scale, value_unit

@@ -18,6 +18,9 @@ unicorn7_csv
     Superdex 75 runs from easy_aekta (no license stated: local testing only, do not redistribute).
 unicorn5_asc
     UNICORN 5 .asc/.csv exports from chromr (MIT).
+unicorn5_xls
+    UNICORN 5 legacy Excel (.xls) exports of three purification runs from fplc-chromatogram
+    (GPL-3.0).
 fraunhofer_lysozyme
     Measured acetone/dextran tracer pulses (with and without column, triplicates) and lysozyme
     gradient elutions (0–120 CV) on a strong cation exchanger. S. Menzel & J. Buyel, Fraunhofer
@@ -39,6 +42,7 @@ LICENSES = {
     "unicorn5_res": "GPL-2.0 (PyCORN, PyCornGUI sample files)",
     "unicorn7_csv": "MIT (Appia); no license stated (easy_aekta) - local testing only",
     "unicorn5_asc": "MIT (chromr)",
+    "unicorn5_xls": "GPL-3.0 (fplc-chromatogram)",
     "fraunhofer_lysozyme": "CC BY-NC-SA 4.0, (c) S. Menzel, J. Buyel (Fraunhofer IME)",
     "cadet_workshop_yamamoto": "CC BY-NC-SA 4.0 (CADET-Workshop)",
 }
@@ -121,6 +125,27 @@ FILES = [
         "7e76afdb97054fedd738017a6b547e3e3fe0b2ca",
         "inst/extdata/example_akta_3.csv",
         "3f773c9637f018cf659f601e346b05bc194be2bc1751309b6a9fe0837bab4cdf",
+    ),
+    (
+        "unicorn5_xls",
+        "ismailuddin/fplc-chromatogram",
+        "88bfc5f985ace1a9b0f804db5bde7558e274a0a2",
+        "Protein A.xls",
+        "aec0a8700d66f1c0d192146d18c0f5475771a466798640bfdcc1f8a8c21e3dfc",
+    ),
+    (
+        "unicorn5_xls",
+        "ismailuddin/fplc-chromatogram",
+        "88bfc5f985ace1a9b0f804db5bde7558e274a0a2",
+        "Protein B.xls",
+        "4aa8cca8462d37a4c66103b57043d9bde099330b3463f623c585cc7804a62b2c",
+    ),
+    (
+        "unicorn5_xls",
+        "ismailuddin/fplc-chromatogram",
+        "88bfc5f985ace1a9b0f804db5bde7558e274a0a2",
+        "Protein C.xls",
+        "b74e3308a502321c1f39ce037d12eb5683cbacb51f19ac7e42e80aabfde86bd6",
     ),
     (
         "fraunhofer_lysozyme",

@@ -1,6 +1,6 @@
 # 0011 — Third-party data: fetched, never committed
 
-- Status: proposed (2026-11-27)
+- Status: accepted (maintainer, 2026-11-27: the repository is public; non-commercial data sets may be fetched for local use but never added to it)
 - Date: 2026-11-27
 
 ## Context
@@ -28,5 +28,5 @@ licenses.
   real-data checks (needs access to raw.githubusercontent.com).
 - If an upstream repository disappears, its case study can no longer be reproduced; the
   checksums make a replacement copy verifiable.
-- Legacy `.xls` UNICORN exports remain unsupported (ADR 0006); one public data set
-  (fplc-chromatogram) uses that format and is therefore not part of the case studies.
+- Legacy `.xls` UNICORN exports are supported since ADR 0012; the fixture is our own run
+  converted with LibreOffice, the real `.xls` files are fetched like the other data.

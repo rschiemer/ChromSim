@@ -32,6 +32,7 @@ GENERIC_MAPPING = {
 FIXTURES = {
     "akta_csv": (AKTA_CSV, {}),
     "akta_xlsx": (AKTA_XLSX, {}),
+    "akta_xls": (DATA / "akta" / "cex_mab_hmw_run01.xls", {}),
     "generic_csv": (GENERIC_CSV, {"mapping": GENERIC_MAPPING}),
     "generic_xlsx": (DATA / "generic" / "plain_export.xlsx", {"mapping": GENERIC_MAPPING}),
     "unicorn_res": (DATA / "unicorn_res" / "cex_mab_hmw_run01.res", {}),
@@ -291,3 +292,55 @@ def test_unicorn5_curve_prefix_is_removed():
     ]
     experiment = parse_unicorn_table(rows, "run", {})
     assert set(experiment.signals) == {"UV", "Cond"}
+
+
+# --- legacy Excel (.xls) and UNICORN unit spellings ------------------------------------------
+
+
+def test_akta_xls_matches_xlsx():
+    from_xls = read_chromatogram(DATA / "akta" / "cex_mab_hmw_run01.xls")
+    from_xlsx = read_chromatogram(AKTA_XLSX)
+    assert from_xls.metadata["importer"] == "akta_xls"
+    assert set(from_xls.signals) == set(from_xlsx.signals)
+    for name, signal in from_xls.signals.items():
+        assert np.allclose(signal.x, from_xlsx.signals[name].x)
+        assert np.allclose(signal.values, from_xlsx.signals[name].values)
+    assert [f.label for f in from_xls.fractions] == [f.label for f in from_xlsx.fractions]
+    assert from_xls.injections_m3 == from_xlsx.injections_m3
+
+
+def test_akta_xls_unknown_sheet():
+    with pytest.raises(ChromSimError, match="no worksheet 'nope'"):
+        read_chromatogram(DATA / "akta" / "cex_mab_hmw_run01.xls", sheet="nope")
+
+
+def test_unicorn_unit_spellings_are_normalised():
+    rows = [
+        ["Run:10_Conc", "", "Run:10_Flow", "", "Run:10_UV", ""],
+        ["ml", " %B", "ml", " ml/min", "ml", "mAu"],
+        ["0.0", "50.0", "0.0", "1.0", "0.0", "1000.0"],
+        ["0.1", "60.0", "0.1", "1.0", "0.1", "1000.0"],
+    ]
+    signals = parse_unicorn_table(rows, "run", {}).signals
+    assert (signals["Conc"].kind, signals["Conc"].unit) == ("concentration_b", "1")
+    assert np.allclose(signals["Conc"].values, [0.5, 0.6])
+    assert signals["Flow"].unit == "m**3/s"
+    assert np.allclose(signals["Flow"].values, 1e-6 / 60)
+    assert np.allclose(signals["UV"].values, 1.0)  # mAu = mAU
+
+
+REAL_XLS = sorted(
+    (Path(__file__).parents[2] / "examples" / "case_studies" / "data" / "unicorn5_xls").glob(
+        "*.xls"
+    )
+)
+
+
+@pytest.mark.skipif(not REAL_XLS, reason="case-study data not fetched")
+@pytest.mark.parametrize("path", REAL_XLS, ids=lambda p: p.name)
+def test_real_xls_files(path):
+    experiment = read_chromatogram(path)
+    assert experiment.metadata["importer"] == "akta_xls"
+    assert experiment.signal("uv").original_unit == "mAU"
+    assert experiment.signal("concentration_b").unit == "1"
+    assert experiment.fractions and experiment.injections_m3 and experiment.log

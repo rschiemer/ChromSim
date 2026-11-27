@@ -8,6 +8,7 @@ baseline drift and noise:
 
 - akta/cex_mab_hmw_run01.csv  ÄKTA UNICORN 7 text export: UTF-16, tab-separated, title row
 - akta/cex_mab_hmw_run01.xlsx the same run as UNICORN Excel export (no title row)
+- akta/cex_mab_hmw_run01.xls  the same workbook in legacy Excel 97–2003 format (via LibreOffice)
 - assays/total_protein_a280.csv  wide, semicolon + decimal comma, with fraction volumes, <LOQ
 - assays/sec_hplc.xlsx           long format, sheet "SEC results", no volumes, includes a feed
                                  sample "Load" and a sample "A99" that was never collected
@@ -33,8 +34,11 @@ Raw data are read-only for ChromSim (CLAUDE.md); this script is the only thing t
 Re-running it with the same seed reproduces the files.
 """
 
+import shutil
 import struct
+import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 import numpy as np
@@ -472,6 +476,26 @@ def write_unicorn_res(source_csv: Path, res_path: Path) -> None:
     res_path.write_bytes(bytes(content))
 
 
+def write_unicorn_xls(xlsx_path: Path, xls_path: Path) -> None:
+    """Convert the UNICORN Excel fixture to the legacy Excel 97–2003 format (.xls).
+
+    Uses LibreOffice (``soffice``) in headless mode, so no Python package for writing .xls is
+    needed; ChromSim itself only reads .xls (with xlrd).
+    """
+    soffice = shutil.which("soffice") or shutil.which("libreoffice")
+    if soffice is None:
+        raise SystemExit("LibreOffice (soffice) is needed to write the .xls fixture.")
+    with tempfile.TemporaryDirectory() as folder:
+        subprocess.run(
+            [soffice, "--headless", "--convert-to", "xls", "--outdir", folder, str(xlsx_path)],
+            check=True,
+            capture_output=True,
+        )
+        converted = Path(folder) / f"{xlsx_path.stem}.xls"
+        xls_path.parent.mkdir(exist_ok=True)
+        shutil.copyfile(converted, xls_path)
+
+
 def write_generic_variants():
     """The generic plain export as an Excel table and as a headerless whitespace file."""
     rows = [line.split(",") for line in (OUT / "generic/plain_export.csv").read_text().splitlines()]
@@ -499,6 +523,7 @@ def main():
     write_lge_runs()
     write_unicorn_res(OUT / "akta/cex_mab_hmw_run01.csv", OUT / "unicorn_res/cex_mab_hmw_run01.res")
     write_generic_variants()
+    write_unicorn_xls(OUT / "akta/cex_mab_hmw_run01.xlsx", OUT / "akta/cex_mab_hmw_run01.xls")
     print("fixtures written to", OUT)
 
 
