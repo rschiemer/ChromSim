@@ -20,7 +20,9 @@ Tutorial 02 (`examples/02_compare_with_data.py`) walks through a complete exampl
 |---|---|---|
 | `akta_csv` | ÄKTA UNICORN text export (`.csv`, `.asc`, `.txt`) | UTF-16 or UTF-8; tab, comma or semicolon; decimal commas |
 | `akta_xlsx` | ÄKTA UNICORN Excel export (`.xlsx`) | first worksheet unless `sheet=` |
-| `generic_csv` | any delimited text file | needs `mapping=` (see below) |
+| `unicorn_res` | native UNICORN 3–5 result file (`.res`) | ÄKTA prime/purifier/explorer; binary, read directly |
+| `generic_csv` | any delimited text file, with or without header | needs `mapping=` (see below) |
+| `generic_xlsx` | any Excel table | needs `mapping=`; `sheet=` optional |
 
 List them with `api.list_importers()`.
 
@@ -29,17 +31,32 @@ List them with `api.list_importers()`.
 UNICORN writes two columns per curve (x and value). Above the data are a row of curve names
 (`Chrom.1_UV1_280nm`, …) and a row of units (`ml`, `mAU`, …). ChromSim:
 
-- strips the `Chrom.N_` prefix and classifies curves as `uv`, `conductivity`, `ph`,
-  `concentration_b`, `pressure` or `other`;
+- strips the `Chrom.N_` prefix (UNICORN 6/7) or the `<result name>:<n>_` prefix (UNICORN 5)
+  and classifies curves as `uv`, `conductivity`, `ph`, `concentration_b`, `pressure`,
+  `concentration` (mM, g/L) or `other`;
 - converts mAU → AU, mS/cm → S/m, % → fraction, ml → m³, min → s;
 - turns the `Fractions` curve into fractions: each mark starts a fraction, and `Waste` marks
   end one;
 - keeps `Injection` marks and the `Run Log`.
 
-!!! warning "Validate with your own export"
-    The UNICORN parser was developed against the documented layout and synthetic files in
-    `tests/data/akta/`. Before relying on it, check it once with an anonymised export from your
-    own system, and add that file as a test fixture.
+!!! note "Tested on real exports"
+    Besides the synthetic files in `tests/data/akta/`, the UNICORN importers have been run on
+    eleven real files from ÄKTA prime, purifier and pure systems published by other groups
+    (case study 01, `examples/case_studies/`). Still check once with an export from your own
+    system: UNICORN's export options (curve selection, x axis relative to injection) vary.
+
+### Native UNICORN 3–5 result files (`.res`)
+
+UNICORN 5 and older store each run in one binary `.res` file. `unicorn_res` reads it without
+UNICORN or any extra package: every curve with its own unit and scale factor (read from the
+file, not assumed), fractions, injection marks and the logbook. The volume axis is the one the
+system recorded (not shifted to the injection); injection marks are in
+`experiment.injections_m3`. UNICORN 6 and later do not write `.res` files: export those results
+as CSV or XLSX. The layout is described in the module docstring of
+`chromsim/data/importers/unicorn_res.py`.
+
+Legacy Excel 97–2003 exports (`.xls`) cannot be read (that needs another dependency); open them
+in Excel and save as `.xlsx`, or export from UNICORN as CSV.
 
 ### Generic CSV
 
@@ -58,6 +75,27 @@ signals:
 experiment = api.read_chromatogram("export.csv", importer="generic_csv", mapping="mapping.yaml")
 ```
 
+Files without a header row (e.g. MATLAB `save -ascii` output: time and concentration in two
+aligned columns) use `header: false`; columns are then numbered from 0:
+
+```yaml
+header: false
+delimiter: whitespace
+x_column: 0
+x_unit: s
+signals:
+  - {column: 1, name: lysozyme, unit: mM}
+```
+
+Concentration signals (`mM`, `g/L`, …) are converted to mol/m³ or kg/m³ and get the kind
+`concentration`, or `salt` if their name starts with "salt". Excel tables use the same mapping
+with `importer="generic_xlsx"` (and `sheet=` if not the first sheet).
+
+### Data recorded against time
+
+Workflows work on the pumped volume. For a run at constant flow, convert with
+`api.time_to_volume(signal, flow_rate_m3_per_s)`.
+
 ## Preprocessing
 
 | Function | Does |
@@ -68,6 +106,8 @@ experiment = api.read_chromatogram("export.csv", importer="generic_csv", mapping
 | `conductivity_to_salt(signal, calibration)` | uses a measured salt ↔ conductivity calibration |
 | `resample(signal, x)` | interpolates onto new x values |
 | `volume_to_time(volume, steps)` | pumped volume → time, using the method's flow rates |
+| `time_to_volume(signal, flow_rate)` | time axis → pumped-volume axis, constant flow |
+| `inlet_profile(project, "salt", delay)` | the method's inlet salt on the volume axis, shifted by a delay volume (outlet salt when no conductivity was recorded) |
 
 Windows and x values are in SI units (m³ or s), e.g. `(2e-6, 15e-6)` for 2–15 mL.
 

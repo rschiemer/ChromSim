@@ -20,10 +20,20 @@ above are unchanged by adding these):
 - akta/tracer_acetone.csv    pore-penetrating acetone pulse (ε_t)
 - akta/lge_{10,20,30,40}cv.csv  low-load mAb runs with 10–40 CV gradients (Yamamoto method)
 
+Native UNICORN 5 format (re-encodes run 01, no new random numbers):
+
+- unicorn_res/cex_mab_hmw_run01.res  UV, conductivity, fractions, injection and logbook as .res
+
+Generic tables (copies of generic/plain_export.csv):
+
+- generic/plain_export.xlsx  the same table as an Excel sheet "Run"
+- generic/headerless.dat     volume and UV only, no header, whitespace-aligned
+
 Raw data are read-only for ChromSim (CLAUDE.md); this script is the only thing that writes them.
 Re-running it with the same seed reproduces the files.
 """
 
+import struct
 import sys
 from pathlib import Path
 
@@ -365,6 +375,118 @@ def write_lge_runs():
         )
 
 
+def _res_entry(name: str, type_id: str, size: int, address: int, data_offset: int) -> bytes:
+    entry = bytearray(344)
+    entry[0:8] = bytes.fromhex(type_id)
+    encoded = name.encode("cp1252")
+    entry[8 : 8 + len(encoded)] = encoded
+    block_span = -(-size // 512) * 512  # blocks are padded to 512 bytes
+    entry[304:320] = struct.pack("<4i", size, block_span, address, data_offset)
+    return bytes(entry)
+
+
+def _res_sensor_block(volume_ml, values, unit: str, value_scale: float) -> bytes:
+    header = bytearray(240)
+    header[0:8] = bytes.fromhex("0600020001004e00")
+    header[128:130] = b"ml"
+    header[144:146] = b"\x04\x01"
+    struct.pack_into("<d", header, 146, 0.01)
+    header[206 : 206 + len(unit)] = unit.encode("cp1252")
+    header[222:224] = b"\x04\x01"
+    struct.pack_into("<d", header, 224, value_scale)
+    pairs = np.column_stack(
+        [np.round(np.asarray(volume_ml) / 0.01), np.round(np.asarray(values) / value_scale)]
+    ).astype("<i4")
+    return bytes(header) + pairs.tobytes()
+
+
+def _res_mark_block(marks_ml) -> bytes:
+    header = bytearray(552)
+    header[0:8] = bytes.fromhex("0600060001004e00")
+    records = bytearray()
+    for volume, text in marks_ml:
+        record = bytearray(180)
+        struct.pack_into("<2d", record, 0, volume / 0.5, volume)  # time at 0.5 mL/min, unused
+        encoded = text.encode("cp1252")[:163]
+        record[16 : 16 + len(encoded)] = encoded
+        records += record
+    return bytes(header) + bytes(records)
+
+
+def write_unicorn_res(source_csv: Path, res_path: Path) -> None:
+    """Re-encode a UNICORN text export as a native UNICORN 5 result file (.res, format 3.10).
+
+    Follows the layout documented in chromsim.data.importers.unicorn_res, so the importer can be
+    tested against a file we are free to publish. Volumes are stored in 0.01 mL steps, UV and
+    conductivity in 0.001 steps, as UNICORN 5 does.
+    """
+    experiment = api.read_chromatogram(source_csv)
+    run = "cex_mab_hmw_run01"
+    sensors = [
+        ("UV1_280nm", experiment.signal("uv"), "mAU", 1000.0, 0.001),
+        ("Cond", experiment.signal("conductivity"), "mS/cm", 10.0, 0.001),
+    ]
+    blocks = [
+        (
+            f"{run}:1_{name}",
+            "0000010004000114",
+            _res_sensor_block(signal.x / ML, signal.values * to_unit, unit, scale),
+            240,
+        )
+        for name, signal, unit, to_unit, scale in sensors
+    ]
+    fraction_marks = [(f.start_m3 / ML, f.label) for f in experiment.fractions]
+    fraction_marks.append((experiment.fractions[-1].end_m3 / ML, "Waste"))
+    blocks += [
+        (
+            f"{run}:1_Logbook",
+            "0000010004004804",
+            _res_mark_block([(v / ML, t) for v, t in experiment.log]),
+            552,
+        ),
+        (f"{run}:1_Fractions", "0000010004004404", _res_mark_block(fraction_marks), 552),
+        (
+            f"{run}:1_Inject",
+            "0000010004004604",
+            _res_mark_block([(v / ML, "") for v in experiment.injections_m3]),
+            552,
+        ),
+        ("LogBook", "0000010002000113", b"Method Run 10/10/2026 (system logbook)\x00", 0),
+    ]
+    first_block = 686 + 344 * len(blocks)
+    first_block = -(-first_block // 512) * 512
+    directory, body, address = b"", b"", first_block
+    for name, type_id, block, data_offset in blocks:
+        directory += _res_entry(name, type_id, len(block), address, data_offset)
+        padded = block + b"\x00" * (-len(block) % 512)
+        body += padded
+        address += len(padded)
+    start = bytearray(686)
+    start[0:16] = bytes.fromhex("1147114718000000b0020000206c0300")
+    start[24:36] = b"UNICORN 3.10"
+    head = bytes(start) + directory
+    head += b"\x00" * (first_block - len(head))
+    content = bytearray(head + body)
+    struct.pack_into("<i", content, 16, len(content))
+    res_path.parent.mkdir(exist_ok=True)
+    res_path.write_bytes(bytes(content))
+
+
+def write_generic_variants():
+    """The generic plain export as an Excel table and as a headerless whitespace file."""
+    rows = [line.split(",") for line in (OUT / "generic/plain_export.csv").read_text().splitlines()]
+    workbook = openpyxl.Workbook()
+    sheet = workbook.active
+    sheet.title = "Run"
+    sheet.append(rows[0])
+    for row in rows[1:]:
+        sheet.append([_number_or_text(cell) for cell in row])
+    workbook.save(OUT / "generic/plain_export.xlsx")
+    # Volume in mL, UV in mAU as two right-aligned columns (MATLAB `save -ascii` style).
+    lines = [f"{float(row[0]):15.7e}{float(row[1]):15.7e}" for row in rows[1:]]
+    (OUT / "generic/headerless.dat").write_text("\n".join(lines) + "\n")
+
+
 def main():
     (OUT / "akta").mkdir(exist_ok=True)
     (OUT / "assays").mkdir(exist_ok=True)
@@ -375,6 +497,8 @@ def main():
     write_assays(result, fraction_marks)
     write_tracer_runs()
     write_lge_runs()
+    write_unicorn_res(OUT / "akta/cex_mab_hmw_run01.csv", OUT / "unicorn_res/cex_mab_hmw_run01.res")
+    write_generic_variants()
     print("fixtures written to", OUT)
 
 

@@ -30,3 +30,8 @@ site/
 
 # CADET-Process default scratch folder (should not appear; see diagnostics.py)
 tmp/
+
+# Third-party case-study data, downloaded by examples/case_studies/fetch_data.py
+examples/case_studies/data/
+# Figures written by the case studies
+examples/case_studies/output/

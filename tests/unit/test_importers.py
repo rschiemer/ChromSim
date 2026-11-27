@@ -33,6 +33,8 @@ FIXTURES = {
     "akta_csv": (AKTA_CSV, {}),
     "akta_xlsx": (AKTA_XLSX, {}),
     "generic_csv": (GENERIC_CSV, {"mapping": GENERIC_MAPPING}),
+    "generic_xlsx": (DATA / "generic" / "plain_export.xlsx", {"mapping": GENERIC_MAPPING}),
+    "unicorn_res": (DATA / "unicorn_res" / "cex_mab_hmw_run01.res", {}),
 }
 INTERNAL_UNITS = {"AU", "S/m", "pH", "1", "Pa", "mol/m**3", "kg/m**3"}
 
@@ -209,6 +211,83 @@ def test_duplicate_importer_name_is_rejected():
         def read(self, path, **options):
             raise NotImplementedError
 
+    before = list_importers()
     with pytest.raises(PluginRegistrationError, match="already registered"):
         register_importer(AnotherAkta)
-    assert list_importers() == ["akta_csv", "akta_xlsx", "generic_csv"]
+    assert list_importers() == before  # the failed registration changed nothing
+
+
+# --- generic tables: headerless text, Excel, concentration signals -------------------------------
+
+
+def test_generic_csv_headerless_whitespace_by_position():
+    mapping = {
+        "header": False,
+        "delimiter": "whitespace",
+        "x_column": 0,
+        "x_unit": "mL",
+        "signals": [{"column": 1, "name": "UV", "unit": "mAU"}],
+    }
+    headerless = read_chromatogram(
+        DATA / "generic" / "headerless.dat", "generic_csv", mapping=mapping
+    )
+    with_header = read_chromatogram(GENERIC_CSV, "generic_csv", mapping=GENERIC_MAPPING)
+    assert np.allclose(headerless.signals["UV"].x, with_header.signals["UV280"].x)
+    assert np.allclose(headerless.signals["UV"].values, with_header.signals["UV280"].values)
+
+
+def test_generic_csv_position_out_of_range():
+    mapping = {
+        "header": False,
+        "delimiter": "whitespace",
+        "x_column": 0,
+        "x_unit": "mL",
+        "signals": [{"column": 5, "unit": "mAU"}],
+    }
+    with pytest.raises(ChromSimError, match="position 5 does not exist"):
+        read_chromatogram(DATA / "generic" / "headerless.dat", "generic_csv", mapping=mapping)
+
+
+def test_generic_xlsx_matches_csv():
+    from_xlsx = read_chromatogram(
+        DATA / "generic" / "plain_export.xlsx", "generic_xlsx", mapping=GENERIC_MAPPING, sheet="Run"
+    )
+    from_csv = read_chromatogram(GENERIC_CSV, "generic_csv", mapping=GENERIC_MAPPING)
+    for name in ("UV280", "Cond"):
+        assert np.allclose(from_xlsx.signals[name].values, from_csv.signals[name].values)
+    with pytest.raises(ChromSimError, match="cannot read sheet"):
+        read_chromatogram(
+            DATA / "generic" / "plain_export.xlsx",
+            "generic_xlsx",
+            mapping=GENERIC_MAPPING,
+            sheet="nope",
+        )
+
+
+def test_concentration_signals_are_converted_and_classified(tmp_path):
+    table = tmp_path / "conc.csv"
+    table.write_text("time [s],Salt [mM],A [g/L]\n0,50,0.0\n10,60,1.5\n")
+    mapping = {
+        "x_column": "time [s]",
+        "x_unit": "s",
+        "signals": [
+            {"column": "Salt [mM]", "name": "salt", "unit": "mM"},
+            {"column": "A [g/L]", "name": "A", "unit": "g/L"},
+        ],
+    }
+    experiment = read_chromatogram(table, "generic_csv", mapping=mapping)
+    salt, protein = experiment.signals["salt"], experiment.signals["A"]
+    assert (salt.kind, salt.unit) == ("salt", "mol/m**3")
+    assert (protein.kind, protein.unit) == ("concentration", "kg/m**3")
+    assert experiment.signals["salt"].x_axis == "time"
+
+
+def test_unicorn5_curve_prefix_is_removed():
+    rows = [
+        ["Manual run 3:10_UV", "", "Manual run 3:10_Cond", ""],
+        ["ml", "mAU", "ml", "mS/cm"],
+        ["0.0", "1.0", "0.0", "5.0"],
+        ["0.1", "2.0", "0.1", "5.1"],
+    ]
+    experiment = parse_unicorn_table(rows, "run", {})
+    assert set(experiment.signals) == {"UV", "Cond"}

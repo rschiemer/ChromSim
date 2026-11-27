@@ -6,6 +6,9 @@ import hashlib
 from pathlib import Path
 from typing import Any, Protocol
 
+import numpy as np
+
+from chromsim import units
 from chromsim.data.experiment import Experiment
 from chromsim.errors import ChromSimError
 
@@ -41,7 +44,11 @@ def file_metadata(path: Path, importer_name: str) -> dict:
 
 
 def guess_kind(curve_name: str, unit: str) -> str:
-    """Classify a curve by name and unit: uv, conductivity, ph, concentration_b, pressure, other."""
+    """Classify a curve by name and unit.
+
+    Returns one of uv, conductivity, ph, concentration_b, pressure, salt (a concentration whose
+    name starts with "salt"), concentration (any other mM or g/L signal) or other.
+    """
     name = curve_name.lower().replace(" ", "")
     if name.startswith("uv") or unit.strip().endswith("AU"):
         return "uv"
@@ -53,6 +60,8 @@ def guess_kind(curve_name: str, unit: str) -> str:
         return "concentration_b"
     if "press" in name:
         return "pressure"
+    if units.signal_to_si(np.ones(1), unit)[1] in ("mol/m**3", "kg/m**3"):
+        return "salt" if name.startswith("salt") else "concentration"
     return "other"
 
 

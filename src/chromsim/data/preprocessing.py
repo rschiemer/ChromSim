@@ -214,3 +214,77 @@ def volume_to_time(volume_m3, steps: list[ResolvedStep]):
     for step in steps:
         knot_volumes.append(knot_volumes[-1] + step.flow_rate_m3_per_s * step.duration_s)
     return np.interp(volume_m3, knot_volumes, knot_times)
+
+
+def time_to_volume(
+    signal: Signal, flow_rate_m3_per_s: float, start_volume_m3: float = 0.0
+) -> Signal:
+    """Put a time-axis signal on the volume axis, for a run at constant flow rate.
+
+    Many published and simulated data sets are recorded against time. ChromSim's workflows
+    (tracer moments, Yamamoto, fits) work on the pumped volume, V = V_0 + Q·t.
+
+    Parameters
+    ----------
+    signal : Signal
+        Signal with ``x_axis == "time"`` (x in s).
+    flow_rate_m3_per_s : float
+        Constant flow rate Q of the run, m³/s.
+    start_volume_m3 : float
+        Pumped volume V_0 at t = 0, m³.
+
+    Raises
+    ------
+    ChromSimError
+        If the signal is not on the time axis or the flow rate is not positive.
+    """
+    if signal.x_axis != "time":
+        raise ChromSimError(f"Signal '{signal.name}' is already on the {signal.x_axis} axis.")
+    if flow_rate_m3_per_s <= 0:
+        raise ChromSimError(f"Flow rate must be positive, got {flow_rate_m3_per_s:g} m³/s.")
+    return replace(signal, x_axis="volume", x=start_volume_m3 + flow_rate_m3_per_s * signal.x)
+
+
+def inlet_profile(project, component: str, delay_volume_m3: float = 0.0) -> Signal:
+    """The inlet concentration of a component programmed by the method, on the volume axis.
+
+    Shifted by ``delay_volume_m3`` this is a good estimate of the outlet salt concentration
+    of a non-retained salt gradient: the salt front reaches the detector after the system volume
+    plus the pore-accessible column volume, V_delay = V_sys + ε_t·V_c (Yamamoto et al. 1988).
+    Use it for the Yamamoto method when no conductivity trace was recorded. Dispersion of the
+    salt front is neglected, which is harmless for gradients that are long compared with the
+    column volume.
+
+    Parameters
+    ----------
+    project : Project
+        Its method defines the inlet concentrations and flow rates.
+    component : str
+        Component name, e.g. ``"salt"``.
+    delay_volume_m3 : float
+        Volume by which the profile is shifted, m³.
+
+    Returns
+    -------
+    Signal
+        Concentration (mol/m³) of kind ``salt`` (component 0) or ``concentration``.
+    """
+    names = [c.name for c in project.components]
+    if component not in names:
+        raise ChromSimError(f"Unknown component '{component}'. Components: {', '.join(names)}.")
+    index = names.index(component)
+    volumes, concentrations, pumped = [], [], 0.0
+    for step in project.resolved_method():
+        step_volume = step.flow_rate_m3_per_s * step.duration_s
+        volumes += [pumped, pumped + step_volume]
+        concentrations += [step.inlet_start_mol_per_m3[index], step.inlet_end_mol_per_m3[index]]
+        pumped += step_volume
+    return Signal(
+        name=f"{component} (method, delayed {units.from_si(delay_volume_m3, 'mL'):.3g} mL)",
+        kind="salt" if index == 0 else "concentration",
+        x_axis="volume",
+        x=np.array(volumes) + delay_volume_m3,
+        values=np.array(concentrations),
+        unit="mol/m**3",
+        original_unit="mM",
+    )
