@@ -54,10 +54,10 @@ def test_checker_finds_mutable_bindings():
 
 
 @pytest.mark.parametrize(
-    "path", sorted(PACKAGE.rglob("*.py")), ids=lambda p: str(p.relative_to(PACKAGE))
+    "path", sorted(PACKAGE.rglob("*.py")), ids=lambda p: p.relative_to(PACKAGE).as_posix()
 )
 def test_no_module_level_mutable_state(path):
-    module = str(path.relative_to(PACKAGE))
+    module = path.relative_to(PACKAGE).as_posix()  # ALLOWED uses "/" on every OS
     offending = [
         name
         for name in mutable_module_names(path.read_text(encoding="utf-8"))

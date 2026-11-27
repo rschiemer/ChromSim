@@ -97,6 +97,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - `read_assay` reports blank or unreadable fraction start/end volumes instead of storing NaN
   volumes (silent NaN comparisons) or failing with a bare `ValueError`.
 - `plot_overlay` axis titles list only the signals that are drawn.
+- `test_no_module_state` compares module paths with "/" so the allow-list also matches on
+  Windows (the check itself is unchanged).
 - Web UI: saving a project under an invalid name, or applying a tracer analysis that does not fit
   the system volumes, shows the error instead of raising an unhandled exception.
 - Text assigned into nested dicts of a project (e.g. `step.inlet["mAb"] = "1 g/L"`) no longer
