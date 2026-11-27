@@ -539,7 +539,8 @@ def signal_to_si(values, unit: str):
     -------
     tuple of (numpy.ndarray, str)
         Converted values and their unit: absorbance in ``"AU"``, conductivity in ``"S/m"``,
-        percentages as a fraction (``"1"``), pH as ``"pH"``, other pint-compatible units in SI.
+        percentages as a fraction (``"1"``), pH as ``"pH"``, concentrations in ``"mol/m**3"``
+        (``mM``) or ``"kg/m**3"`` (``g/L``), other pint-compatible units in SI.
         Units ChromSim does not know (e.g. offset temperatures) are returned unchanged.
     """
     text = unit.strip()
@@ -553,7 +554,15 @@ def signal_to_si(values, unit: str):
         quantity = ureg.Quantity(1.0, text)
     except (pint.errors.PintError, ValueError, SyntaxError, TypeError):
         return values * 1.0, text
-    for dimension in ("conductivity", "pressure", "volume", "time", "volumetric_flow"):
+    for dimension in (
+        "conductivity",
+        "pressure",
+        "volume",
+        "time",
+        "volumetric_flow",
+        "molar_concentration",
+        "mass_concentration",
+    ):
         si_unit = SI_UNITS[dimension]
         if quantity.dimensionality == ureg.Quantity(1.0, si_unit).dimensionality:
             return values * quantity.to(si_unit).magnitude, si_unit

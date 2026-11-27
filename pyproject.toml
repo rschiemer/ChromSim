@@ -21,6 +21,7 @@ dependencies = [
     "plotly",
     "pyyaml",
     "openpyxl",
+    "xlrd>=2",
 ]
 
 [project.optional-dependencies]

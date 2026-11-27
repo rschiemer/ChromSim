@@ -82,8 +82,9 @@ class SignalTarget:
     Attributes
     ----------
     signal : Signal
-        Measured, preprocessed signal on the volume axis: UV in AU (baseline-corrected), or salt in
-        mol/m³ (from :func:`conductivity_to_salt`), or conductivity in S/m.
+        Measured, preprocessed signal on the volume axis: UV in AU (baseline-corrected), salt in
+        mol/m³ (from :func:`conductivity_to_salt`), conductivity in S/m, or the concentration of
+        one component (kind ``concentration``, mol/m³ or kg/m³; set ``component``).
     window : (float, float), optional
         Volume range to fit, m³; default the whole signal.
     weight : float
@@ -94,6 +95,9 @@ class SignalTarget:
         UV flow-cell path length (UV targets).
     calibration : ConductivityCalibration, optional
         Needed for conductivity targets.
+    component : str, optional
+        Component whose outlet concentration a ``concentration`` signal measures. It is
+        compared at the UV detector (delayed by ``system.uv_delay_volume``).
     """
 
     signal: Signal
@@ -102,6 +106,7 @@ class SignalTarget:
     residual: str = "normalized"
     path_length: str = "0.2 cm"
     calibration: ConductivityCalibration | None = None
+    component: str | None = None
 
     def simulated(self, result: SimulationResult, project: Project) -> Signal:
         """The simulated counterpart of the measured signal."""
@@ -124,7 +129,27 @@ class SignalTarget:
                     "Conductivity targets need calibration=ConductivityCalibration(...)."
                 )
             return predict_conductivity(result, project, self.calibration)
-        raise ChromSimError(f"Cannot fit signals of kind '{kind}'; use uv, salt or conductivity.")
+        if kind == "concentration":
+            if self.component is None:
+                raise ChromSimError("Concentration targets need component='<component name>'.")
+            unit = {"mol/m**3": "mM", "kg/m**3": "g/L"}.get(self.signal.unit)
+            if unit is None:
+                raise ChromSimError(
+                    f"Concentration target '{self.signal.name}' is in {self.signal.unit}; "
+                    "expected mol/m**3 or kg/m**3."
+                )
+            return Signal(
+                f"{self.component} (simulated)",
+                "concentration",
+                "volume",
+                result.volume_m3 + project.system.uv_delay_volume_m3,
+                result.outlet(self.component, unit),  # mM = mol/m³ and g/L = kg/m³ numerically
+                self.signal.unit,
+                unit,
+            )
+        raise ChromSimError(
+            f"Cannot fit signals of kind '{kind}'; use uv, salt, conductivity or concentration."
+        )
 
     def residuals(self, result: SimulationResult, project: Project) -> np.ndarray:
         measured = self.signal

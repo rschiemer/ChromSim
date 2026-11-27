@@ -50,9 +50,11 @@ from chromsim.data.importers import list_importers, read_chromatogram
 from chromsim.data.preprocessing import (
     ConductivityCalibration,
     conductivity_to_salt,
+    inlet_profile,
     load_conductivity_calibration,
     resample,
     subtract_baseline,
+    time_to_volume,
     uv_to_concentration,
     volume_to_time,
 )
@@ -191,6 +193,8 @@ __all__ = [
     "conductivity_to_salt",
     "resample",
     "subtract_baseline",
+    "time_to_volume",
+    "inlet_profile",
     "uv_to_concentration",
     "volume_to_time",
     # comparing simulation and experiment

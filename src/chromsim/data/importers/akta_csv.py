@@ -27,14 +27,21 @@ import numpy as np
 
 from chromsim import units
 from chromsim.data.experiment import Experiment, Signal, fractions_from_marks
-from chromsim.data.importers.base import check_options, file_metadata, guess_kind, parse_number
+from chromsim.data.importers.base import (
+    check_options,
+    file_metadata,
+    guess_kind,
+    normalise_unicorn_unit,
+    parse_number,
+)
 from chromsim.data.importers.registry import register_importer
 from chromsim.errors import ChromSimError
 
 logger = logging.getLogger(__name__)
 
 AXIS_UNITS = MappingProxyType({"ml": "volume", "min": "time"})
-_CHROMATOGRAM_PREFIX = re.compile(r"^Chrom\.\d+_")
+# UNICORN 6/7 prefix curve names with "Chrom.1_"; UNICORN 5 with "<result name>:<n>_".
+_CHROMATOGRAM_PREFIX = re.compile(r"^(Chrom\.\d+_|.*:\d+_)")
 
 
 def _find_unit_row(rows: list[list[str]], max_header_rows: int = 6) -> int | None:
@@ -105,7 +112,7 @@ def parse_unicorn_table(rows: list[list[str]], name: str, metadata: dict) -> Exp
             else ""
         )
         x_unit = unit_row[column].strip()
-        value_unit = unit_row[column + 1].strip()
+        value_unit = normalise_unicorn_unit(unit_row[column + 1])
         if not curve or not x_unit:
             continue
         axis = AXIS_UNITS[x_unit.lower()]

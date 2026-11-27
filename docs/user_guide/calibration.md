@@ -37,6 +37,10 @@ peak maximum, I_R (`elution_salt_at_peak(uv, salt, uv_delay, conductivity_delay)
 `yamamoto_fit(runs, V_c, ε_t, Λ)` returns ν, k_eq and the regression, and `plot_yamamoto` shows
 it. The derivation is on the [theory page](../theory/yamamoto.md).
 
+Without a conductivity trace, take the outlet salt from the method:
+`inlet_profile(project, "salt", delay_volume_m3=V_sys + ε_t·V_c)` shifts the programmed
+inlet salt by the volume the salt front needs to reach the detector (case study 02).
+
 ## 3. Inverse fit
 
 ```python
@@ -44,6 +48,8 @@ experiment = api.FitExperiment("run01", project, targets=[
     api.SignalTarget(uv, window=(60e-6, 140e-6)),          # UV in AU, baseline-corrected
     api.AssayTarget(sec, fractions=run.fractions),          # SD-weighted
 ])
+# A measured concentration (e.g. from another detector or a published data set):
+#   api.SignalTarget(lysozyme_mM, component="lysozyme")
 parameters = [
     api.FitParameter(path="isotherm.parameters.mAb.k_eq", lower=1e-3, upper=1e-1, scale="log"),
     api.FitParameter(path="isotherm.parameters.mAb.nu", lower=3, upper=10),

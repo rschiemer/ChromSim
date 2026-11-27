@@ -5,3 +5,4 @@ pixi.lock merge=binary linguist-language=YAML linguist-generated=true
 tests/data/akta/** binary
 tests/data/assays/** binary
 tests/data/generic/** binary
+tests/data/unicorn_res/** binary

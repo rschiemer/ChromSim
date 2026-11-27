@@ -26,6 +26,7 @@ dependencies:
 - matplotlib *
 - pymoo >=0.6
 - openpyxl *
+- xlrd >=2
 - pip
 - pip:
   - cadet-process>=0.11

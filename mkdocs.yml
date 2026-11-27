@@ -41,6 +41,7 @@ nav:
       - Calibrating a model: user_guide/calibration.md
       - Fractionation and process optimization: user_guide/process_optimization.md
       - Web UI, workspaces and jobs: user_guide/web_ui.md
+      - Case studies on published data: user_guide/case_studies.md
   - How-to:
       - Add an isotherm: how_to/add_isotherm.md
       - Add an optimizer: how_to/add_optimizer.md
@@ -71,6 +72,8 @@ nav:
       - 0008 Reference backend: decisions/0008-reference-backend.md
       - 0009 Optimizer interface: decisions/0009-optimizer-interface.md
       - 0010 Fractionation: decisions/0010-fractionation.md
+      - 0011 Third-party data: decisions/0011-third-party-data.md
+      - 0012 xlrd for .xls: decisions/0012-xlrd.md
 
 extra_javascript:
   - javascripts/mathjax.js
