@@ -95,6 +95,84 @@ def test_python_isotherm_matches_its_cadet_twin(column_model):
     assert nrmse(on_cadet_grid, cadet_result.outlet("A")) < NRMSE_LIMIT
 
 
+COLLOIDAL_2 = {
+    "model": "Colloidal",
+    "parameters": {
+        "A": {
+            "radius": 4.5e-9,
+            "ln_ke_salt_factor": 40.0,
+            "ln_ke_salt_exponent": 0.4,
+            "ln_ke_exp_factor": 1.0,
+            "ln_ke_exp_salt_coefficient": -1e-3,
+            "b_pp_salt_factor": 5.0,
+            "b_pp_salt_exponent": 0.2,
+            "b_pp_exp_factor": 2.0,
+            "b_pp_exp_salt_coefficient": -2e-3,
+            "k_kin": 1.0,
+        },
+        "B": {
+            "radius": 3e-9,
+            "ln_ke_salt_factor": 30.0,
+            "ln_ke_salt_exponent": 0.4,
+            "b_pp_salt_factor": 3.0,
+            "b_pp_salt_exponent": 0.0,
+            "k_kin": 2.0,
+        },
+    },
+    "global_parameters": {
+        "phase_ratio": 5e7,
+        "kappa_factor": 1e-10,
+        "kappa_exponent": 0.3,
+        "kappa_constant": 5e-10,
+    },
+}
+
+
+@pytest.mark.parametrize("column_model", ["LRM", "LRMP"])
+def test_colloidal_on_reference_backend_matches_cadet(column_model):
+    # Two proteins of different size, every salt term switched on, and a load where the lattice
+    # term matters (dropping it changes the outlet by 16-29 % NRMSE): this pins the mapping onto
+    # CADET's COL_* names, which CADET's own docs describe inconsistently (ADR 0011). Measured
+    # NRMSE <= 0.3 %. Much higher loads (q beyond close packing) are too stiff for the
+    # reference backend's finite-difference Jacobian.
+    project = make_binding_project(
+        SALT + [{"name": "A"}, {"name": "B"}],
+        COLLOIDAL_2,
+        {"salt": "50 mM", "A": "0.1 mM", "B": "0.1 mM"},
+        elute={"salt": "1000 mM"},
+        column_model=column_model,
+        n_col=100,
+    )
+    cadet = api.simulate(with_model(project, column_model, "cadet"))
+    reference = api.simulate(with_model(project, column_model, "reference"))
+    for component in ("A", "B"):
+        on_cadet_grid = np.interp(cadet.time_s, reference.time_s, reference.outlet(component))
+        assert nrmse(on_cadet_grid, cadet.outlet(component)) < NRMSE_LIMIT, component
+
+
+@pytest.mark.parametrize("column_model", ["LRM", "LRMP"])
+def test_sas_on_reference_backend_matches_cadet(column_model):
+    # Strong self-association (k_sa c ≈ 5 at the load concentration): pins k_a2 = k_sa·k_a.
+    sas = {
+        "model": "SAS",
+        "parameters": {
+            "A": {"k_eq": 1e-2, "nu": 5.0, "sigma": 20.0, "self_association": 10.0, "k_kin": 10.0}
+        },
+    }
+    project = make_binding_project(
+        SALT + [{"name": "A"}],
+        sas,
+        {"salt": "50 mM", "A": "0.5 mM"},
+        elute={"salt": "1000 mM"},
+        column_model=column_model,
+        n_col=100,
+    )
+    cadet = api.simulate(with_model(project, column_model, "cadet"))
+    reference = api.simulate(with_model(project, column_model, "reference"))
+    on_cadet_grid = np.interp(cadet.time_s, reference.time_s, reference.outlet("A"))
+    assert nrmse(on_cadet_grid, cadet.outlet("A")) < NRMSE_LIMIT
+
+
 @pytest.mark.parametrize("column_model", ["LRM", "LRMP"])
 def test_reference_mass_balance(column_model):
     tracer = api.simulate(with_model(make_physics_project("LRM"), column_model, "reference"))

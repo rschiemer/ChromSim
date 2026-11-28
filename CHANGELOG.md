@@ -7,6 +7,34 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ## [Unreleased]
 
 ### Added
+- `SAS`: self-association SMA (Mollerup 2008), CADET-native (`SelfAssociation`) with a Python
+  flux for the reference backend. Parameter `self_association` k_sa = k_a2/k_a in m³/mol;
+  k_sa = 0 is SMA. Tests: SMA identity on CADET, reference vs CADET, anti-Langmuirian start
+  criterion k_sa > ν(ν+σ)K_H/Λ, equilibrium flux. Docs page `sas.md`.
+- Tutorial 07 (`examples/07_langmuir_anti_langmuir.py`): Langmuirian vs anti-Langmuirian elution
+  for SMA, SAS (weak/strong), Colloidal and CPA on one matched protein. Covers the q/c diagnostic,
+  the SAS criterion against salt, load series with normalised peaks, elution salt and asymmetry
+  factor against load, why the colloidal isotherms are Langmuirian-only, and a literature
+  overview.
+- Colloidal isotherms (ADR 0011):
+  - `Colloidal`: Xu & Lenhoff (2009) colloidal isotherm, CADET-native (`MultiComponentColloidal`)
+    with a Python flux, so it also runs on the reference backend (≤ 0.3 % NRMSE vs CADET).
+    Descriptive parameter names; mapping pinned against CADET-Core's C++ source, whose
+    interface docs describe the ln K_e power factor/exponent the wrong way round.
+  - `CPA`: colloidal particle adsorption model (Briskot et al. 2021) as a Python isotherm:
+    Debye screening, Grahame potentials, closed-form sphere–plane double-layer well,
+    scaled-particle-theory available surface function, Yukawa lateral repulsion. Building
+    blocks are public functions (`debye_kappa`, `grahame_potential`, `well_depth`,
+    `available_surface_function`, `lateral_energy`, `CPA.equilibrium_factor`).
+  - Tests: textbook limits of every CPA building block, Colloidal flux vs the documented
+    equation, Colloidal → Linear identity on CADET, Colloidal reference vs CADET (two proteins,
+    nonlinear).
+- Tutorial 06 (`examples/06_colloidal_models.py`): CPA and Colloidal side by side on synthetic
+  data. Covers the inside of CPA (screening → potentials → well → K_H), Colloidal calibrated to
+  CPA, the sources of nonlinearity, and columns at low and high load (gradient elution,
+  breakthrough, load sweep, extrapolation to 25 mM).
+- Docs: theory pages for both isotherms, "Colloidal adsorption models" (background and
+  literature), ADR 0011.
 - Phase 7 web UI and server-ready plumbing (SPEC §8, §8.1):
   - `FileStorage` workspace folder: projects (YAML), write-once read-only data files, results
     and optimization histories (HDF5), JSON records; `created_by`/`created_at` on everything.
