@@ -83,6 +83,9 @@ isotherm:
   `…_POWFACT` as an exponent; the C++ source does the opposite. ChromSim follows the source,
   and `tests/backends/test_reference_vs_cadet.py` pins it with all terms switched on.
 
+Tutorial 06 (`examples/06_colloidal_models.py`) calibrates this model to CPA and compares both
+at low and high load.
+
 ## Checks in the test suite
 
 - Python flux = the documented equation, term by term (`tests/unit/test_colloidal_isotherms.py`).

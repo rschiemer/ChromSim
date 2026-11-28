@@ -111,6 +111,9 @@ lifted later without changing the parameter names above.
 4. **One A_s** for all components (the papers allow a size-dependent accessible surface).
 5. **Grahame for both surfaces.** Equivalent to Debye–Hückel for weakly charged proteins.
 
+Tutorial 06 (`examples/06_colloidal_models.py`) walks through every step on synthetic data and
+compares CPA with the Colloidal isotherm at low and high load.
+
 ## Checks in the test suite
 
 `tests/unit/test_colloidal_isotherms.py`:

@@ -8,7 +8,9 @@ between adsorbed neighbours. The appeal for process modeling is twofold: paramet
 physical meaning (radius, charge), and a more realistic shape of the isotherm at high load,
 where SMA tends to overestimate nonlinearity (Briskot et al. 2021a).
 
-ChromSim ships two models of this family:
+ChromSim ships two models of this family. Tutorial 06 (`examples/06_colloidal_models.py`)
+compares them side by side on synthetic data at low and high load.
+
 
 | | [Colloidal](isotherms/colloidal.md) (Xu & Lenhoff) | [CPA](isotherms/cpa.md) (Briskot et al.) |
 |---|---|---|

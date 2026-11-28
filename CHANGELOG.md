@@ -20,6 +20,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   - Tests: textbook limits of every CPA building block, Colloidal flux vs the documented
     equation, Colloidal → Linear identity on CADET, Colloidal reference vs CADET (two proteins,
     nonlinear).
+- Tutorial 06 (`examples/06_colloidal_models.py`): CPA and Colloidal side by side on synthetic
+  data. Covers the inside of CPA (screening → potentials → well → K_H), Colloidal calibrated to
+  CPA, the sources of nonlinearity, and columns at low and high load (gradient elution,
+  breakthrough, load sweep, extrapolation to 25 mM).
 - Docs: theory pages for both isotherms, "Colloidal adsorption models" (background and
   literature), ADR 0011.
 - Phase 7 web UI and server-ready plumbing (SPEC §8, §8.1):
