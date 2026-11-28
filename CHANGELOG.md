@@ -7,6 +7,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ## [Unreleased]
 
 ### Added
+- `SAS`: self-association SMA (Mollerup 2008), CADET-native (`SelfAssociation`) with a Python
+  flux for the reference backend. Parameter `self_association` k_sa = k_a2/k_a in m³/mol;
+  k_sa = 0 is SMA. Tests: SMA identity on CADET, reference vs CADET, anti-Langmuirian start
+  criterion k_sa > ν(ν+σ)K_H/Λ, equilibrium flux. Docs page `sas.md`.
+- Tutorial 07 (`examples/07_langmuir_anti_langmuir.py`): Langmuirian vs anti-Langmuirian elution
+  for SMA, SAS (weak/strong), Colloidal and CPA on one matched protein. Covers the q/c diagnostic,
+  the SAS criterion against salt, load series with normalised peaks, elution salt and asymmetry
+  factor against load, why the colloidal isotherms are Langmuirian-only, and a literature
+  overview.
 - Colloidal isotherms (ADR 0011):
   - `Colloidal`: Xu & Lenhoff (2009) colloidal isotherm, CADET-native (`MultiComponentColloidal`)
     with a Python flux, so it also runs on the reference backend (≤ 0.3 % NRMSE vs CADET).

@@ -257,3 +257,49 @@ def test_colloidal_rapid_equilibrium_passes_unit_rate_to_cadet():
     assert mapped["kinetic_rate_constant"] == [0.0, 1.0]
     assert mapped["logkeq_power_factor"] == [0.0, 40.0]
     assert mapped["logkeq_power_exponent"] == [0.0, 0.4]
+
+
+# --- SAS (self-association SMA) -------------------------------------------------------------
+
+
+def sas_equilibrium_q(c, salt, values, capacity=500.0):
+    """Single-component SAS equilibrium q(c) by bisection on q = K (1 + k_sa c) (q̄0/c_s)^ν c."""
+    low, high = 0.0, capacity / (values["nu"] + values["sigma"])
+    for _ in range(200):
+        q = 0.5 * (low + high)
+        free = capacity - (values["nu"] + values["sigma"]) * q
+        target = (
+            values["k_eq"]
+            * (1 + values["self_association"] * c)
+            * (free / salt) ** values["nu"]
+            * c
+        )
+        low, high = (q, high) if target > q else (low, q)
+    return q
+
+
+def test_sas_flux_vanishes_at_its_equilibrium():
+    sas = get_isotherm("SAS")
+    values = {"k_eq": 1e-2, "nu": 5.0, "sigma": 20.0, "self_association": 10.0, "k_kin": 10.0}
+    p = binding_parameters(["salt", "A"], {"A": values}, None, 500.0)
+    c, salt = 0.2, 80.0
+    q = sas_equilibrium_q(c, salt, values)
+    bound_salt = 500.0 - values["nu"] * q
+    rate = sas.flux(np.array([[salt], [c]]), np.array([[bound_salt], [q]]), p)
+    assert abs(rate[1, 0]) < 1e-9 * values["k_kin"] * q
+
+
+def test_sas_is_anti_langmuirian_at_low_loading_and_langmuirian_near_saturation():
+    # q/c rises with c while (1 + k_sa c) wins, then falls when the steric term takes over.
+    # Linearised at q → 0: d ln(q/c)/dc = k_sa − ν(ν+σ) K_H / Λ, with K_H = k_eq (Λ/c_s)^ν.
+    # At 150 mM: ν(ν+σ) K_H / Λ = 125 · 4.1 / 500 ≈ 1.0 < k_sa = 10 → anti-Langmuirian start.
+    values = {"k_eq": 1e-2, "nu": 5.0, "sigma": 20.0, "self_association": 10.0}
+    c = np.geomspace(1e-4, 5.0, 60)
+    affinity = np.array([sas_equilibrium_q(ci, 150.0, values) / ci for ci in c])
+    peak = np.argmax(affinity)
+    assert 0 < peak < c.size - 1
+    assert np.all(np.diff(affinity[: peak + 1]) > 0) and np.all(np.diff(affinity[peak:]) < 0)
+    # Without self-association (SMA) q/c only falls: Langmuirian everywhere.
+    sma = values | {"self_association": 0.0}
+    sma_affinity = np.array([sas_equilibrium_q(ci, 150.0, sma) / ci for ci in c])
+    assert np.all(np.diff(sma_affinity) < 0)

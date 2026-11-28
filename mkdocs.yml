@@ -51,6 +51,7 @@ nav:
           - Linear: theory/isotherms/linear.md
           - Langmuir: theory/isotherms/langmuir.md
           - Steric mass action: theory/isotherms/sma.md
+          - Self-association SMA: theory/isotherms/sas.md
           - Generalized ion exchange: theory/isotherms/giex.md
           - Mobile phase modulator: theory/isotherms/mpm.md
           - HIC constant water activity: theory/isotherms/hic_constant_water_activity.md

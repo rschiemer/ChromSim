@@ -5,6 +5,7 @@
 | `Linear` | [Linear](linear.md) | low loading, tracers, Henry constants |
 | `Langmuir` | [Langmuir](langmuir.md) | affinity resins, single- and multi-component saturation |
 | `SMA` | [Steric mass action](sma.md) | ion exchange with salt gradients |
+| `SAS` | [Self-association SMA](sas.md) | ion exchange with anti-Langmuirian (AL-L) elution |
 | `GIEX` | [Generalized ion exchange](giex.md) | ion exchange with salt **and pH** dependence |
 | `MPM` | [Mobile phase modulator Langmuir](mpm.md) | HIC; mixed-mode approximation |
 | `HICConstantWaterActivity` | [HIC, constant water activity](hic_constant_water_activity.md) | HIC |
@@ -25,7 +26,7 @@
 - Parameter values are plain numbers in the units listed on each page; they coincide with SI
   (mol/m³ = mM, m³/mol = 1/mM, 1/s).
 - Isotherm-wide parameters (e.g. HIC β₀, β₁) go under `isotherm.global_parameters`.
-- Modifiers come first: salt is component 0 for SMA, GIEX, MPM, HIC, Colloidal and CPA models; for GIEX the pH
+- Modifiers come first: salt is component 0 for SMA, SAS, GIEX, MPM, HIC, Colloidal and CPA models; for GIEX the pH
   pseudo-component is component 1 (inlet unit `pH`).
 
 Background and literature on the colloidal models: [Colloidal adsorption models](../colloidal_models.md).

@@ -49,6 +49,36 @@ compares them side by side on synthetic data at low and high load.
    on AEX (Döring et al., KITopen 1000184789); robust IEX modeling with the colloidal isotherm in
    CADET (Kumar et al. 2021).
 
+## Langmuirian and anti-Langmuirian behaviour
+
+Both colloidal isotherms are **Langmuirian for every parameter set**: peaks move to earlier
+elution with increasing load. In CPA, the excluded-area factor B(Θ) ≤ 1 and the lateral
+term is repulsive (β_ij ∝ Z_lat,i·Z_lat,j > 0). In Colloidal, the lattice term
+√(b_pp,i·b_pp,j)·… is non-negative, and even a negative b_pp loses its sign for a single
+protein. Anti-Langmuirian elution (later elution and fronting with load), as reported for
+bispecific antibodies, Fc-fusion proteins and polypeptides on cation exchangers, needs
+attractive protein–protein interactions. In ChromSim the [SAS](isotherms/sas.md) isotherm
+describes it empirically. Tutorial 07 (`examples/07_langmuir_anti_langmuir.py`) compares SMA,
+SAS, Colloidal and CPA over a load series.
+
+Literature on anti-Langmuirian protein IEX
+
+- Seelinger, F., Wittkopp, F., von Hirschheydt, T. & Frech, C. Anti-Langmuir elution behavior of
+  a bispecific monoclonal antibody in cation exchange chromatography: Mechanistic modeling using
+  a pH-dependent Self-Association Steric Mass Action isotherm. *J. Chromatogr. A* 1689 (2022).
+- Koch, J., Scheps, D., Gunne, M., Boscheinen, O., Hafner, M. & Frech, C. Mechanistic modeling
+  and simulation of a complex low and high loading elution behavior of a polypeptide in cation
+  exchange chromatography. *J. Sep. Sci.* 45 (2022) 2008–2023.
+- Mechanistic modeling of anti-Langmuirian to Langmuirian behavior of Fc-fusion proteins in
+  cation exchange chromatography. *J. Chromatogr. A* (2025) (nGIEX model).
+- Huuk, T. C., Hahn, T., Doninger, K., Griesbach, J., Hepbildikler, S. & Hubbuch, J. Modeling of
+  complex antibody elution behavior under high protein load densities in ion exchange
+  chromatography using an asymmetric activity coefficient. *Biotechnol. J.* 12 (2017) 1600336.
+- Diedrich, J. et al. Multi-state steric mass action model and case study on complex high loading
+  behavior of mAb on ion exchange tentacle resin. *J. Chromatogr. A* 1525 (2017) 60–70.
+- Mollerup, J. M. A review of the thermodynamics of protein association to ligands, protein
+  adsorption, and adsorption isotherms. *Chem. Eng. Technol.* 31 (2008) 864–874.
+
 ## Literature
 
 Core model papers

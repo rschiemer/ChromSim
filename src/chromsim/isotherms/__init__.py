@@ -4,7 +4,7 @@ Importing this package registers the built-in isotherms.
 """
 
 # Importing a module registers its isotherms (Linear, Langmuir, SMA, MPM, GIEX, HIC, BiLangmuir,
-# Colloidal, and the Python isotherms MixedModeLangmuir and CPA).
+# Colloidal, SAS, and the Python isotherms MixedModeLangmuir and CPA).
 from chromsim.isotherms import (  # noqa: F401
     bi_langmuir,
     cadet_native,
@@ -12,6 +12,7 @@ from chromsim.isotherms import (  # noqa: F401
     generalized_ion_exchange,
     hydrophobic_interaction,
     mobile_phase_modulator,
+    self_association,
 )
 from chromsim.isotherms.custom import (  # noqa: F401
     colloidal_particle_adsorption,

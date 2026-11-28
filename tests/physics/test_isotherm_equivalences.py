@@ -182,3 +182,19 @@ def test_colloidal_without_lattice_and_salt_dependence_is_linear():
         load,
     )
     assert nrmse(outlet(colloidal, "A"), outlet(linear, "A")) < IDENTITY_NRMSE
+
+
+def test_sas_without_self_association_is_sma():
+    # k_sa = 0 removes the dimerisation term: (k_a1 + k_a2 c) c → k_a1 c.
+    load = {"salt": "50 mM", "A": "0.5 mM"}
+    sma = {"k_eq": 1e-2, "nu": 5.0, "sigma": 20.0, "k_kin": 10.0}
+    projects = [
+        make_binding_project(
+            SALT + [{"name": "A"}],
+            {"model": model, "parameters": {"A": values}},
+            load,
+            elute={"salt": "1000 mM"},
+        )
+        for model, values in (("SMA", sma), ("SAS", sma | {"self_association": 0.0}))
+    ]
+    assert nrmse(outlet(projects[1], "A"), outlet(projects[0], "A")) < IDENTITY_NRMSE

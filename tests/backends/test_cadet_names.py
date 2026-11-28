@@ -41,7 +41,7 @@ def test_isotherm_cadet_class_and_attributes_exist(isotherm_name):
 
 def test_built_in_cadet_isotherms_are_all_pinned():
     expected = {"Linear", "Langmuir", "SMA", "GIEX", "MPM", "BiLangmuir"}
-    expected |= {"HICConstantWaterActivity", "HICWaterOnHydrophobicSurfaces", "Colloidal"}
+    expected |= {"HICConstantWaterActivity", "HICWaterOnHydrophobicSurfaces", "Colloidal", "SAS"}
     assert expected <= set(CADET_NATIVE)
 
 

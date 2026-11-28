@@ -151,6 +151,29 @@ def test_colloidal_on_reference_backend_matches_cadet(column_model):
 
 
 @pytest.mark.parametrize("column_model", ["LRM", "LRMP"])
+def test_sas_on_reference_backend_matches_cadet(column_model):
+    # Strong self-association (k_sa c ≈ 5 at the load concentration): pins k_a2 = k_sa·k_a.
+    sas = {
+        "model": "SAS",
+        "parameters": {
+            "A": {"k_eq": 1e-2, "nu": 5.0, "sigma": 20.0, "self_association": 10.0, "k_kin": 10.0}
+        },
+    }
+    project = make_binding_project(
+        SALT + [{"name": "A"}],
+        sas,
+        {"salt": "50 mM", "A": "0.5 mM"},
+        elute={"salt": "1000 mM"},
+        column_model=column_model,
+        n_col=100,
+    )
+    cadet = api.simulate(with_model(project, column_model, "cadet"))
+    reference = api.simulate(with_model(project, column_model, "reference"))
+    on_cadet_grid = np.interp(cadet.time_s, reference.time_s, reference.outlet("A"))
+    assert nrmse(on_cadet_grid, cadet.outlet("A")) < NRMSE_LIMIT
+
+
+@pytest.mark.parametrize("column_model", ["LRM", "LRMP"])
 def test_reference_mass_balance(column_model):
     tracer = api.simulate(with_model(make_physics_project("LRM"), column_model, "reference"))
     assert np.trapezoid(tracer.outlet("tracer"), tracer.time_s) == pytest.approx(
